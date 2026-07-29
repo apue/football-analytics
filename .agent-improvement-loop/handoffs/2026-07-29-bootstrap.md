@@ -44,8 +44,8 @@ template executed from a clean kernel.
 - Git HTTPS access to the upstream data repository timed out during bootstrap.
   The current ignored clone uses authenticated SSH; the public script defaults
   to HTTPS and supports `FOOTBALL_ANALYTICS_OPEN_DATA_URL`.
-- The project has no explicit source-code license yet. Public visibility does
-  not itself grant reuse rights; choose a license separately if desired.
+- Repository code and course materials use the MIT License. Hudl StatsBomb
+  Open Data remains governed by its upstream terms and attribution rules.
 
 ## Next Action
 

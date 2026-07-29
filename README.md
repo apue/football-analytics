@@ -104,3 +104,8 @@ xT。只有后期可选的深度序列或大规模追踪数据实验才考虑 GP
 ```
 
 参见 [docs/methodology.md](docs/methodology.md)。
+
+## 许可证
+
+本仓库的代码和课程材料采用 [MIT License](LICENSE)。Hudl StatsBomb Open
+Data 不包含在该许可证中，仍适用上游仓库自己的许可与归属要求。
