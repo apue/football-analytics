@@ -4,17 +4,17 @@ Status: accepted
 
 ## Done Definition
 
-- [ ] Git repository exists with a public GitHub remote and an initial push.
-- [ ] `uv sync --all-groups` succeeds from the locked project.
-- [ ] Hudl open data is present as an ignored shallow partial clone and has a
+- [x] Git repository exists with a public GitHub remote and an initial push.
+- [x] `uv sync --all-groups` succeeds from the locked project.
+- [x] Hudl open data is present as an ignored shallow partial clone and has a
       documented update command.
-- [ ] README, AGENTS, syllabus, methodology, data guide, agent workflow, course
+- [x] README, AGENTS, syllabus, methodology, data guide, agent workflow, course
       state, and all lesson templates exist.
-- [ ] The initial stage and first lesson are detailed enough to begin in a new
+- [x] The initial stage and first lesson are detailed enough to begin in a new
       session.
-- [ ] Package tests and lint pass.
-- [ ] The template notebook is valid and executes from a clean kernel.
-- [ ] Git status contains no accidentally tracked external or generated data.
+- [x] Package tests and lint pass.
+- [x] The template notebook is valid and executes from a clean kernel.
+- [x] Git status contains no accidentally tracked external or generated data.
 
 ## Acceptance Scenarios
 
@@ -30,11 +30,11 @@ Status: accepted
 
 ## Manual Review Checklist
 
-- [ ] Behavior matches SPEC.
-- [ ] Architecture boundaries are preserved.
-- [ ] Reuse and cleanup report was considered.
-- [ ] Public-repository hygiene was inspected.
-- [ ] Validation plan passed or remaining delta is recorded.
+- [x] Behavior matches SPEC.
+- [x] Architecture boundaries are preserved.
+- [x] Reuse and cleanup report was considered.
+- [x] Public-repository hygiene was inspected.
+- [x] Validation plan passed or remaining delta is recorded.
 
 ## Out of Scope
 
