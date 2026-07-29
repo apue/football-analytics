@@ -1,0 +1,36 @@
+{
+  "iteration": 1,
+  "date": "YYYY-MM-DD",
+  "target": "agent-or-harness-area",
+  "review": {
+    "evidence_reviewed": [
+      "trace-123",
+      "eval-001"
+    ],
+    "findings": [
+      "Finding with evidence."
+    ]
+  },
+  "repair": {
+    "changes_made": [
+      "Bounded harness change."
+    ],
+    "files_changed": [
+      "path/to/file"
+    ],
+    "unresolved_items": []
+  },
+  "validation": {
+    "commands": [
+      "command used to validate"
+    ],
+    "passed": false,
+    "results": [
+      "Targeted eval improved, regression still failing."
+    ],
+    "remaining_delta": [
+      "Specific issue for next iteration."
+    ]
+  },
+  "next_action": "continue|stop|human_review|architecture_review"
+}

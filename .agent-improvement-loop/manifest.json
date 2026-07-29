@@ -1,0 +1,14 @@
+{
+  "workspace": ".agent-improvement-loop",
+  "created": "2026-07-29",
+  "purpose": "Agent improvement loop evidence, eval, handoff, and audit trail.",
+  "directories": {
+    "traces": "Raw or linked trace artifacts.",
+    "feedback": "Human, model-judge, CI, or support feedback records.",
+    "evals": "Eval case definitions or links to project-native evals.",
+    "runs": "Per-iteration review, repair, validation, and remaining delta records.",
+    "handoffs": "Codex handoff documents for bounded implementation work.",
+    "decisions": "Accepted, rejected, or deferred harness decisions.",
+    "reports": "Macro-eval summaries and before/after reports."
+  }
+}

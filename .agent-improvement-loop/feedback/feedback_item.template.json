@@ -1,0 +1,14 @@
+{
+  "id": "fb-001",
+  "date": "YYYY-MM-DD",
+  "source": "human|model_judge|support|eval|ci",
+  "trace_id": "optional-trace-id",
+  "agent": "agent-name-or-system",
+  "summary": "Concrete failure or improvement request.",
+  "expected_behavior": "What should have happened.",
+  "evidence": [
+    "path/or/url/or/trace-span"
+  ],
+  "severity": "low|medium|high|critical",
+  "status": "new|converted_to_eval|deferred|resolved"
+}

@@ -1,0 +1,20 @@
+.DS_Store
+.env
+.env.*
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.ipynb_checkpoints/
+
+# Independently cloned source data and reproducible derived data.
+data/external/*
+data/processed/*
+!data/external/.gitkeep
+!data/processed/.gitkeep
+
+# Generated report artifacts are opt-in for publication.
+reports/generated/

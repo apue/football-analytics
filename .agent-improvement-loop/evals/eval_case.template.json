@@ -1,0 +1,24 @@
+{
+  "id": "eval-001",
+  "name": "short_case_name",
+  "source_feedback_ids": [
+    "fb-001"
+  ],
+  "case_type": "simple|medium|complex|macro",
+  "input": {},
+  "expected_outcome": "Outcome-focused expectation.",
+  "process_requirements": [
+    "Use the right tool when required.",
+    "Escalate when policy threshold is met."
+  ],
+  "scoring": {
+    "method": "deterministic|llm_judge|human|hybrid",
+    "pass_threshold": 0.8,
+    "rubric": [
+      "task_success",
+      "tool_use",
+      "policy_compliance"
+    ]
+  },
+  "regression_scope": "targeted|smoke|full"
+}
