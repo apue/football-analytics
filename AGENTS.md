@@ -51,6 +51,14 @@ When a lesson enters review:
 - Update `course/state.yaml` only when global navigation changes.
 - Explain the outputs and limitations to the learner.
 
+## Data Selection
+
+Use `$select-match-data` when locating competitions, seasons, teams, managers,
+or matches and when fetching open-data files. Resolve names to stable IDs,
+report catalog coverage, and confirm ambiguous or incomplete scopes before
+analysis. Do not bypass the catalog with ad hoc source parsing unless
+diagnosing the catalog itself.
+
 ## Turn Completion And Checkpoints
 
 Use `$course-turn-checkpoint` after any turn that modifies the repository. The

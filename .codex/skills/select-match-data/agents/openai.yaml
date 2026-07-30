@@ -1,0 +1,4 @@
+interface:
+  display_name: "Select Match Data"
+  short_description: "Resolve football entities and select reproducible match data"
+  default_prompt: "Use $select-match-data to resolve my football query, check open-data coverage, and fetch only the confirmed matches."

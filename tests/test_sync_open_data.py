@@ -20,9 +20,11 @@ def make_source_repository(tmp_path: Path) -> Path:
     run("git", "config", "user.email", "test@example.com", cwd=source)
     (source / "data").mkdir()
     (source / "data" / "competitions.json").write_text("[]\n")
-    (source / "events").mkdir()
-    (source / "events" / "large.json").write_text("not checked out\n")
-    run("git", "add", "data/competitions.json", "events/large.json", cwd=source)
+    (source / "data" / "matches" / "1").mkdir(parents=True)
+    (source / "data" / "matches" / "1" / "2.json").write_text("[]\n")
+    (source / "data" / "events").mkdir()
+    (source / "data" / "events" / "large.json").write_text("not checked out\n")
+    run("git", "add", "data", cwd=source)
     run("git", "commit", "-m", "Initial test data", cwd=source)
     return source
 
@@ -43,7 +45,8 @@ def test_sync_clones_then_updates_existing_repository(tmp_path: Path) -> None:
     subprocess.run([SCRIPT], check=True, env=environment, capture_output=True)
     clone = data_root / "statsbomb-open-data"
     assert (clone / "data" / "competitions.json").is_file()
-    assert not (clone / "events").exists()
+    assert (clone / "data" / "matches" / "1" / "2.json").is_file()
+    assert not (clone / "data" / "events").exists()
 
     expected = '[{"competition_id": 1}]\n'
     (source / "data" / "competitions.json").write_text(expected)

@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 
 OPEN_DATA_ENV = "STATSBOMB_OPEN_DATA"
+CATALOG_ENV = "FOOTBALL_ANALYTICS_CATALOG"
 
 
 def get_project_root(start: Path | None = None) -> Path:
@@ -37,3 +38,13 @@ def get_open_data_root(project_root: Path | None = None) -> Path:
 
     root = project_root.resolve() if project_root else get_project_root()
     return root / "data" / "external" / "statsbomb-open-data"
+
+
+def get_catalog_path(project_root: Path | None = None) -> Path:
+    """Return the configured local open-data catalog path."""
+    override = os.getenv(CATALOG_ENV)
+    if override:
+        return Path(override).expanduser().resolve()
+
+    root = project_root.resolve() if project_root else get_project_root()
+    return root / "data" / "processed" / "open_data_catalog.sqlite"
