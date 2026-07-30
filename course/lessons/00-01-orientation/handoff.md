@@ -1,10 +1,10 @@
 ---
 lesson_id: 00-01-orientation
-status: review
-checkpoint_id: CP-006
-current_step: 已将本课分析沉淀为可复用比赛证据包并完成课程总结
-next_action: 学习者审查 findings、exercises、工具接口与 Notebook，确认是否完成 00-01
-updated_at: 2026-07-30T19:46:51+08:00
+status: completed
+checkpoint_id: CP-007
+current_step: 00-01 已由学习者确认完成，等待合并课程分支
+next_action: 合并后初始化 00-02 事件表课程，再切换全局 current_lesson
+updated_at: 2026-07-30T21:36:09+08:00
 ---
 
 # 课程交接
@@ -32,8 +32,7 @@ updated_at: 2026-07-30T19:46:51+08:00
 
 ## 当前工作
 
-- 本课产物已进入 review，尚未把课程状态改为 completed。
-- 学习者需要审查工具箱的边界：它沉淀确定性证据抽取，不生成战术结论。
+- 学习者已确认合入，本课状态为 completed。
 - 主结果仍包含所有 `play_pattern`；来源字段保留在证据包，Regular Play 作为
   敏感性拆分。
 
@@ -78,6 +77,5 @@ updated_at: 2026-07-30T19:46:51+08:00
 
 ## 开放问题
 
-- 学习者是否认可把“可复用证据接口 + Notebook 解释”作为每课工具箱的模式？
-- `findings.md` 对本课可回答和不可直接回答问题的划分是否准确？
-- 00-01 是否可以完成，并把下一步切换到 00-02 的事件表表示？
+- 00-02 尚未初始化；开始下一课时再创建 lesson 分支并切换全局课程指针。
+- 坐标方向和系统性缺失检查分别留给 00-03 与 00-02。
