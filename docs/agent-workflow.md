@@ -16,20 +16,17 @@
 
 ## Session 恢复
 
-新 session 读取仓库说明和当前 lesson 后运行：
+新 session 读取仓库说明、当前 lesson 和 handoff，然后查看：
 
 ```bash
-uv run python scripts/course_resume.py
+git status --short
+git log --oneline -5
+git diff
 ```
 
-Resume 是只读摘要：
-
-- clean 表示可从当前 HEAD 可达的最近 checkpoint 继续；
-- dirty 表示存在 checkpoint 后的工作，Agent 必须先检查 diff；
-- checkpoint、分支或 handoff 不一致时只报告 warning；
-- 无法读取 state、handoff 或 Git 仓库时才报告 fatal error。
-
-Agent 向学习者展示摘要并等待确认，不自动丢弃、提交或修复文件。
+clean 表示从当前 `HEAD` 继续；dirty 表示有提交后的未完成工作，Agent 先解释
+diff 和风险，不自动丢弃或提交。恢复不需要一套 Python 状态解析器：版本化文本与
+Git 本身就是可审查接口。
 
 ## Lesson 生命周期
 
@@ -40,7 +37,7 @@ Agent 向学习者展示摘要并等待确认，不自动丢弃、提交或修�
 ### In progress
 
 Agent 实现当前最小学习单元。可复用逻辑进入 `src/`，Notebook 负责编排、检查和
-叙事。检查强度与该单元的分析风险相称。
+叙事。需要什么检查由当前分析风险决定，不由 checkpoint 机制决定。
 
 ### Paused 或 Blocked
 
@@ -57,19 +54,32 @@ Handoff 明确已完成和未完成的边界、未运行或失败的检查，以
 学习者确认验收后更新 handoff 和全局导航，形成 completed checkpoint，再进入
 PR、CI 和明确确认后的 squash merge。
 
-## Checkpoint
+## Turn 结束判断
 
-Checkpoint 是有意义学习单元的本地 Git commit，不是每个命令或 cell 的日志。
-常见边界包括数据范围确定、可复用模块完成、Notebook 段落验证、主要图表完成、
-findings/checks 更新或主动暂停。
+仓库的 `$course-turn-checkpoint` Skill 在 dirty turn 结束时处理四种情况：
 
-提交格式为：
+| 可提交 | 学习进度前进 | 动作 |
+| --- | --- | --- |
+| 否 | 否 | 保留未提交 diff，说明尚未完成的边界 |
+| 否 | 是 | 更新 handoff 说明进度与缺口，但不提交 |
+| 是 | 否 | 必要时做最小检查，创建普通本地 commit |
+| 是 | 是 | 更新 handoff，必要时做最小检查，创建 checkpoint |
+
+是否可提交、是否需要检查、是否推进学习进度都依赖本轮上下文与 diff，不能由
+文件名或固定规则替代。纯技术整理不修改学习 handoff。
+
+Checkpoint 是有意义且可恢复的学习单元，不是验证门，也不是每个命令或 cell 的
+日志。提交格式为：
 
 ```text
 checkpoint(<lesson-id>): CP-NNN <step>
 ```
 
 Git 已经保存 checkpoint 历史，所以 handoff 只维护最新快照。课中不 push。
+
+`.codex/hooks.json` 只在 Stop 时运行一次 `git status --porcelain`。若发现 dirty，
+它把判断任务交还给当前 Agent；不会运行测试、修改 handoff 或提交。hook 续跑后
+允许结束，避免无限循环。
 
 ## 分工
 
@@ -86,12 +96,13 @@ Git 已经保存 checkpoint 历史，所以 handoff 只维护最新快照。课�
 
 ## Notebook 边界
 
-Resume 和普通 checkpoint 不执行实际 lesson Notebook。Notebook 的完整
-clean-kernel 验证发生在 review；仓库 CI 只对模板做 smoke test。
+普通 checkpoint 不会因为“到了 checkpoint”而执行 lesson Notebook。分析段落在
+实现时已经按问题做检查；完整 clean-kernel 执行发生在 review。仓库 CI 只对模板
+做 smoke test。
 
 ## 课末交付
 
-1. 进入 review，运行完整验证并向学习者讲解；
+1. 进入 review，按课程产物和完整分支 diff 选择验证并向学习者讲解；
 2. 学习者确认完成后创建 completed checkpoint；
 3. push lesson 分支并创建单课 PR；
 4. CI 通过且获得明确 merge 确认后 squash merge；

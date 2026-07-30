@@ -14,35 +14,41 @@ resume.
 - The active lesson's `handoff.md` is the only resumable course snapshot.
 - Git checkpoint commits are the recovery history; no parallel journal, agent
   memory, or evaluation tree is maintained.
-- `src/football_analytics/` contains reusable analysis or course utilities.
+- `.codex/skills/course-turn-checkpoint/` contains the turn-end judgment
+  workflow; `.codex/hooks.json` only detects a dirty worktree and invokes it.
+- `src/football_analytics/` contains reusable analysis utilities.
 - Notebooks orchestrate lesson analysis and narrative; reusable definitions do
   not live only in notebooks.
 - External and processed data remain untracked.
 
 ## Resume Contract
 
-`scripts/course_resume.py` is read-only. It reports:
-
-- active lesson, status, current step, and next action;
-- current branch and clean or dirty worktree state;
-- the latest checkpoint for the active lesson that is reachable from `HEAD`;
-- warnings for a missing checkpoint, an unexpected branch, or uncommitted work.
-
-Resume does not validate lesson templates, execute notebooks, model status
-transitions, inspect other branches, or modify Git state. Only unreadable or
-invalid state and handoff metadata are fatal.
+A new session reads course state, the active lesson brief and handoff, then
+inspects `git status`, recent commits, and any diff. It reports the latest
+recoverable commit, post-commit work, and one next action before continuing.
+There is no parser or parallel course-state runtime: the tracked text and Git
+history are the interface.
 
 ## Checkpoint Contract
 
-Meaningful lesson units use local commits named:
+At turn end, Codex first checks whether the worktree is dirty. When it is,
+the repository Skill uses task context and the actual diff to decide
+independently whether the change is ready to commit, whether a focused check
+is needed, and whether learning progress changed.
+
+Meaningful, coherent lesson units update the handoff and use local commits
+named:
 
 ```text
 checkpoint(<lesson-id>): CP-NNN <step>
 ```
 
-Before a checkpoint, update the handoff, run checks proportional to that unit,
-and inspect the diff. Lesson branches are not pushed until review. Git history
-is the checkpoint history; the handoff stores only the latest snapshot.
+Technical work that does not advance learning uses a normal commit and leaves
+the handoff alone. Unfinished work stays uncommitted. Lesson branches are not
+pushed until review.
+
+The Stop hook performs only `git status --porcelain`. It runs no tests, makes
+no semantic decision, edits no file, and creates no commit.
 
 ## Dependency Policy
 
@@ -53,19 +59,18 @@ is the checkpoint history; the handoff stores only the latest snapshot.
 
 ## Validation
 
-Default repository validation is:
+The course has no generic validator because lesson progress and football
+interpretation do not have one universal expected output. Checks are selected
+from the current change and analytical risk:
 
-```bash
-uv lock --check
-uv run ruff format --check .
-uv run ruff check .
-uv run pytest
-uv run python scripts/validate_course.py
-uv run python scripts/validate_notebook.py course/templates/analysis.ipynb
-```
+- prose and course-state edits normally receive diff review;
+- deterministic reusable code receives focused tests;
+- notebook sections are checked while built and the complete lesson notebook
+  runs from a clean kernel at review;
+- push and PR delivery run the relevant branch-wide checks and CI.
 
-Resume behavior is covered by focused CLI and Git-state tests. Actual lesson
-notebooks are executed from a clean kernel at review, not at every checkpoint.
+Previously successful checks are not repeated against unchanged content solely
+to create a checkpoint.
 
 ## Delivery
 

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Course Turn Checkpoint"
+  short_description: "Review dirty lesson work and checkpoint decisions"
+  default_prompt: "Review the current turn diff, decide whether it is ready to commit and whether lesson progress advanced, then perform only the necessary checks, handoff update, and local checkpoint."
