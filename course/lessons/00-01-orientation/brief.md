@@ -1,6 +1,6 @@
 # 00-01 仓库、数据与证据边界
 
-Status: ready
+Status: in_progress
 
 ## 足球问题
 
@@ -29,6 +29,22 @@ Hudl StatsBomb 开放数据实际包含什么？仅凭这些数据，哪些比�
 - `data/competitions.json`
 - 所选赛事的 match 文件
 - 所选比赛的 events、lineups，以及可用时的 three-sixty 文件
+
+## 已确认数据范围
+
+- 赛事：La Liga 2020/2021（competition ID `11`，season ID `90`）
+- 比赛：Barcelona 1–3 Real Madrid，2020-10-24（match ID `3773585`）
+- 教练：Ronald Koeman、Zinédine Zidane
+- 文件：
+  - `data/external/statsbomb-open-data/data/matches/11/90.json`
+  - `data/external/statsbomb-open-data/data/lineups/3773585.json`
+  - `data/external/statsbomb-open-data/data/events/3773585.json`
+  - `data/external/statsbomb-open-data/data/three-sixty/3773585.json`
+- 上游 commit：`b0bc9f22dd77c206ddedc1d742893b3bbe64baec`
+
+这场比赛同时具有 match、lineup、event 和 360 数据，且为常规 90 分钟比赛，
+适合第一次建立数据地图。选择知名比赛有助于理解语境，但本课不会据此评价球队
+赛季表现或推断教练战术原因。
 
 ## 产物
 
