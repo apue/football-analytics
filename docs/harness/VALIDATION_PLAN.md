@@ -4,10 +4,12 @@ Status: accepted
 
 ## Validation Mode
 
-Selected modes: schema-check, smoke-test, contract-test, and manual-acceptance.
+Selected modes: strict-tdd, regression-test, schema-check, contract-test,
+smoke-test, and manual-acceptance.
 
-Reason: bootstrap risk is primarily reproducibility, repository hygiene, and
-handoff correctness rather than complex runtime behavior.
+Reason: this change introduces deterministic parsers, validators, Git-history
+matching, and recovery-state classification. Tests cover those contracts while
+the CLI and repository checks provide end-to-end evidence.
 
 ## Commands
 
@@ -17,6 +19,7 @@ uv run ruff format --check .
 uv run ruff check .
 uv run pytest
 uv run python scripts/validate_course.py
+uv run python scripts/course_resume.py
 uv run python scripts/validate_notebook.py course/templates/analysis.ipynb
 git status --short --ignored
 git ls-files data
@@ -25,8 +28,12 @@ git ls-files data
 ## Pass Criteria
 
 - Every command exits successfully.
-- Course state references an existing lesson and valid status.
-- Template files and required handoff fields are present.
+- State v2 references an existing lesson and contains navigation fields only.
+- Handoff frontmatter, required sections, checkpoint format, and latest
+  checkpoint-history entry are valid and consistent.
+- Resume cases cover all allowed statuses, clean/dirty worktrees, mismatched
+  lesson IDs, missing commits, and mismatched checkpoint IDs.
+- The repository resume command identifies an existing local checkpoint.
 - External and processed data remain ignored.
 - No secret, virtual environment, cache, or notebook checkpoint is tracked.
 
@@ -40,5 +47,6 @@ git ls-files data
 
 ## Known Gaps
 
+- GitHub push, PR, CI observation, and squash merge are intentionally deferred
+  until lesson review is accepted by the learner.
 - A data-backed lesson notebook will be validated when the first lesson begins.
-- CI intentionally does not download the multi-gigabyte upstream event dataset.

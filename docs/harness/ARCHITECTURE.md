@@ -30,13 +30,18 @@ for reusable definitions or calculations.
 3. Validate schema assumptions and transform reproducibly in package code.
 4. Execute a lesson notebook using package functions.
 5. Record findings, checks, limitations, and exercises beside the lesson.
-6. Update `course/state.yaml` with status and next action.
+6. Update the lesson `handoff.md`, run targeted checks, inspect the diff, and
+   create a local checkpoint commit for a meaningful learning unit.
 7. Promote only finished, reviewed outputs into `reports/`.
 
 ## Agentic Harness Components
 
 - Instructions: `AGENTS.md` is the portable entrypoint.
-- Routing/handoffs: `docs/agent-workflow.md` and `course/state.yaml`.
+- Routing/handoffs: `course/state.yaml` identifies the sole active lesson;
+  that lesson's `handoff.md` owns resumable status and next-action detail.
+- Resume inspection: `src/football_analytics/course_progress.py` owns parsing,
+  validation, and Git inspection; `scripts/course_resume.py` is a thin,
+  read-only command-line adapter.
 - Memory/context: tracked lesson artifacts and Git history, not chat history.
 - Guardrails: evidence labels, notebook restartability, tests, lint, and
   validation commands.
@@ -64,5 +69,7 @@ for reusable definitions or calculations.
   clean kernel.
 - Upstream data changes: keep source commit visible and update explicitly.
 - Agent context loss: make state and next actions mandatory tracked artifacts.
+- Handoff/Git drift: validate the latest checkpoint-history entry and compare
+  the frontmatter checkpoint with local checkpoint commit subjects.
 - Dependency growth: use optional `uv` groups and add heavy packages only when
   a lesson requires them.

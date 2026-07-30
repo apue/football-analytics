@@ -81,15 +81,22 @@ README 和许可说明。本项目不重新分发上游数据。
 
 ## 如何恢复课程
 
-新的学习或 Agent session 按以下顺序读取：
+新的学习或 Agent session 先运行只读恢复命令：
 
-1. `README.md`
-2. `AGENTS.md`
-3. `course/syllabus.md`
-4. `course/state.yaml`
-5. 当前 lesson 的 `brief.md` 与 `handoff.md`
+```bash
+uv run python scripts/course_resume.py
+```
 
-当前状态以仓库文件和 Git 历史为准，不依赖旧聊天记录。
+它会显示当前课程、状态、checkpoint、分支、下一步、对应本地 commit
+是否存在，以及工作区是 clean 还是 dirty。Agent 必须向学习者展示摘要并等待确认
+后继续。
+
+工作区 clean 时从最新 checkpoint 恢复；dirty 时将改动视为 checkpoint 后尚未
+完成的工作，先检查 diff 和针对性测试，不自动丢弃或提交。当前状态以
+`course/state.yaml`、活动课 `handoff.md` 和 Git 历史为准，不依赖旧聊天记录。
+
+课程中每个有意义的学习单元形成一个本地 `CP-NNN` checkpoint，不 push。课末经
+学习者审查后统一 push，通过单课 PR、CI 和明确确认后的 squash merge 交付。
 
 ## 计算资源
 

@@ -38,3 +38,16 @@ elaborate later stages near the point of use.
 Decision: run the locked Python 3.12 environment, formatting, lint, tests,
 course-state validation, and a clean-kernel notebook smoke test on pull
 requests and pushes to `main`. Upstream match data remains outside CI.
+
+## D008: Single Active Lesson With Local Checkpoints
+
+Decision: schema v2 global state stores only navigation. The active lesson's
+single handoff stores the latest resumable snapshot and short checkpoint
+history. Meaningful learning units use `CP-NNN` local commits; lesson work is
+not pushed until review is accepted.
+
+## D009: Explicit Session Resume
+
+Decision: every new agent session runs a read-only resume command, presents its
+summary, and waits for learner confirmation. Dirty worktrees are treated as
+post-checkpoint work to inspect, never as changes to discard or auto-commit.

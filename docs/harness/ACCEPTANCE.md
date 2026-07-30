@@ -15,6 +15,13 @@ Status: accepted
 - [x] Package tests and lint pass.
 - [x] The template notebook is valid and executes from a clean kernel.
 - [x] Git status contains no accidentally tracked external or generated data.
+- [x] `course/state.yaml` uses schema v2 and contains navigation only.
+- [x] The active handoff has valid frontmatter, a latest snapshot, and matching
+      checkpoint history.
+- [x] `scripts/course_resume.py` reports lesson, status, checkpoint, branch,
+      next action, checkpoint-commit consistency, and worktree state without
+      modifying the repository.
+- [x] Validator and resume tests cover all specified status and recovery cases.
 
 ## Acceptance Scenarios
 
@@ -27,6 +34,12 @@ Status: accepted
    evidence level and limitations are explicit.
 4. Given a core lesson, when it runs on supported open event data, then it does
    not require GPU or paid cloud compute.
+5. Given a new session on a clean checkpoint, when the resume command runs,
+   then it identifies the durable checkpoint and concrete next action.
+6. Given changes after a checkpoint, when the resume command runs, then it
+   labels them as uncommitted post-checkpoint work and does not alter them.
+7. Given inconsistent state, handoff, or Git history, when validation or resume
+   runs, then it exits non-zero with actionable diagnostics.
 
 ## Manual Review Checklist
 

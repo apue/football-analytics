@@ -9,6 +9,11 @@ combines analyst-style questions with progressively deeper statistics and
 machine learning. Coding agents implement and explain the work; the learner
 owns the question, assumptions, interpretation, and evidence review.
 
+The course workflow must also recover safely across Codex sessions. One lesson
+is active at a time, each meaningful learning unit ends in a local checkpoint
+commit, and a new session reports the latest durable checkpoint plus any
+uncommitted work before the learner chooses whether to continue.
+
 ## Non-Goals
 
 - Reproduce video or tracking analysis from event data.
@@ -36,6 +41,12 @@ owns the question, assumptions, interpretation, and evidence review.
   modeling and a capstone.
 - Provide reusable lesson, findings, checks, exercises, and notebook templates.
 - Persist course progress and next actions in a machine-readable state file.
+- Keep global course state limited to navigation and keep the active lesson's
+  status, checkpoint, current step, next action, and history in one handoff.
+- Provide a read-only resume command that checks state/handoff consistency,
+  Git branch and cleanliness, and whether the handoff checkpoint exists in
+  local history.
+- Validate the state v2 and handoff frontmatter contracts.
 - Define provider-neutral agent startup, execution, validation, explanation,
   and handoff rules.
 - Provide a small importable Python package and tests as the base for reusable
@@ -44,6 +55,8 @@ owns the question, assumptions, interpretation, and evidence review.
 ### Non-Functional
 
 - A fresh clone must be recoverable without prior chat history.
+- An interrupted local session must distinguish the last checkpoint from later
+  uncommitted work without discarding or committing that work automatically.
 - Notebooks must be restartable and executable top-to-bottom.
 - Definitions and data limitations must accompany analytical outputs.
 - CPU is the default compute target; optional GPU work must not block the core
