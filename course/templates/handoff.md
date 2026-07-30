@@ -1,6 +1,5 @@
 ---
 lesson_id: <lesson-id>
-stage: <stage-number>
 status: ready
 checkpoint_id: CP-000
 current_step: <Current bounded learning unit>
@@ -29,7 +28,3 @@ updated_at: YYYY-MM-DDTHH:MM:SS+HH:MM
 ## Open Questions
 
 - <Question, limitation, or blocker>
-
-## Checkpoint History
-
-- CP-000 | YYYY-MM-DDTHH:MM:SS+HH:MM | ready | Initialize lesson

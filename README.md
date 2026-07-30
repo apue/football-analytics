@@ -23,10 +23,17 @@ Coding Agent 负责实现、测试和解释代码；学习者负责问题、假�
 
 ## 本地启动
 
-需要 Git、[uv](https://docs.astral.sh/uv/) 和 Python 3.12。安装全部课程依赖：
+需要 Git、[uv](https://docs.astral.sh/uv/) 和 Python 3.12。安装基础开发和
+Notebook 环境：
 
 ```bash
-uv sync --all-groups
+uv sync --group notebook
+```
+
+进入需要 pandas 和绘图的分析课时再运行：
+
+```bash
+uv sync --group notebook --group analysis
 ```
 
 同步公开数据的 Git 元数据和顶层文件：
@@ -97,6 +104,7 @@ uv run python scripts/course_resume.py
 
 课程中每个有意义的学习单元形成一个本地 `CP-NNN` checkpoint，不 push。课末经
 学习者审查后统一 push，通过单课 PR、CI 和明确确认后的 squash merge 交付。
+设计边界见 [docs/project-design.md](docs/project-design.md)。
 
 ## 计算资源
 

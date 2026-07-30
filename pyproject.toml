@@ -6,10 +6,6 @@ readme = "README.md"
 requires-python = ">=3.12,<3.14"
 license = "MIT"
 dependencies = [
-    "matplotlib>=3.10",
-    "mplsoccer>=1.7",
-    "numpy>=2.0",
-    "pandas>=2.2",
     "pyyaml>=6.0",
 ]
 
@@ -18,10 +14,11 @@ notebook = [
     "ipykernel>=6.30",
     "jupyterlab>=4.4",
 ]
-modeling = [
-    "scikit-learn>=1.7",
-    "scipy>=1.15",
-    "statsmodels>=0.14",
+analysis = [
+    "matplotlib>=3.10",
+    "mplsoccer>=1.7",
+    "numpy>=2.0",
+    "pandas>=2.2",
 ]
 dev = [
     "nbclient>=0.10",

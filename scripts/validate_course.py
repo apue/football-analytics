@@ -14,7 +14,7 @@ def main() -> int:
             print(f"ERROR: {error}")
         return 1
 
-    print("Course state and templates are valid.")
+    print("Course state and active lesson metadata are valid.")
     return 0
 
 

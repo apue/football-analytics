@@ -64,8 +64,8 @@ findings/checks, or an explicit pause or learner decision.
 
 Checkpoint order is fixed:
 
-1. Update the single lesson `handoff.md` snapshot and append its concise
-   history entry.
+1. Update the single lesson `handoff.md` with completed work, decisions,
+   validation, and the next action.
 2. Run targeted checks for that learning unit.
 3. Inspect the diff and preserve unrelated learner changes.
 4. Commit locally as
@@ -98,7 +98,6 @@ uv run ruff format --check .
 uv run ruff check .
 uv run pytest
 uv run python scripts/validate_course.py
-uv run python scripts/course_resume.py
 uv run python scripts/validate_notebook.py course/templates/analysis.ipynb
 ```
 
@@ -113,8 +112,7 @@ The handoff frontmatter is the latest resumable snapshot. Its body must state:
 - completed work and changed files;
 - decisions and definitions introduced;
 - validation commands and results;
-- unresolved questions or limitations;
-- concise checkpoint history.
+- unresolved questions or limitations.
 
 Do not leave essential context only in the chat transcript.
 
