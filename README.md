@@ -74,6 +74,15 @@ uv run catalog seasons --competition-id 11 --team-id 217
 和可用的 360；具体选择会记录在 lesson 的 `brief.md` 和 `checks.md`。完整命令和
 覆盖范围约定见 [docs/data-guide.md](docs/data-guide.md)。
 
+下载事件文件后，可以生成一份 JSON 或 Markdown 比赛证据包：
+
+```bash
+uv run match-evidence --match-id 3773585 --format markdown
+```
+
+证据包统一给出进攻三区进入、首次进入控球的后续结果、供应商标记的反击和进球
+事件链。它用于复用可审查的计算，不自动推断球队风格或战术原因。
+
 发布分析时应记录数据源 commit：
 
 ```bash
