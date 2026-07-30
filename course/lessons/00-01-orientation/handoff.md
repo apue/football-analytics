@@ -1,10 +1,10 @@
 ---
 lesson_id: 00-01-orientation
-status: in_progress
-checkpoint_id: CP-005
-current_step: 已区分四个进球的 possession 来源与直接得分事件链
-next_action: 与学习者确认四球事实分类，再选择一个得分机制继续追问
-updated_at: 2026-07-30T19:18:35+08:00
+status: review
+checkpoint_id: CP-006
+current_step: 已将本课分析沉淀为可复用比赛证据包并完成课程总结
+next_action: 学习者审查 findings、exercises、工具接口与 Notebook，确认是否完成 00-01
+updated_at: 2026-07-30T19:46:51+08:00
 ---
 
 # 课程交接
@@ -23,16 +23,19 @@ updated_at: 2026-07-30T19:18:35+08:00
 - 已为四球分别核对 possession 来源、最后助攻/犯规链、射门方式和 xG。
 - 已绘制四球关键事件链，并明确关键链不是完整战术过程。
 - 已放弃自定义快速转换分类，直接接受 StatsBomb `From Counter` 标签。
+- 已新增 `build_match_evidence(events)`，统一抽取进入事件、首次进入 possession
+  结果、供应商反击标签和可审计进球上下文。
+- 已新增薄命令 `match-evidence`，可从本地 match ID 输出 JSON 或 Markdown
+  证据包。
+- 已将 Notebook 的重复抽取逻辑替换为工具箱调用，保留现有图表和叙事。
+- 已新增 `findings.md` 与 `exercises.md`，总结数据地图、证据边界和迁移练习。
 
 ## 当前工作
 
-- Barcelona 有44个进入控球，25个到达禁区、8个形成射门、产生1.101 xG。
-- Real Madrid 有34个进入控球，16个到达禁区、9个形成射门、产生1.500 xG。
-- StatsBomb 只标记两个 `From Counter`，均属于 Barcelona 且没有形成射门。
-- Valverde 是持续控球后的 Benzema 直塞单刀；Fati 是任意球来源的开放式组合。
-- Ramos 点球由 Kroos 任意球后 Lenglet 对 Ramos 的成对 foul 事件产生。
-- Modrić 的 possession 来源是球门球，但直接机制是 Rodrygo 高位回收后的助攻。
-- 结果仍包含所有 `play_pattern`；Notebook 末尾保留 Regular Play 对照练习。
+- 本课产物已进入 review，尚未把课程状态改为 completed。
+- 学习者需要审查工具箱的边界：它沉淀确定性证据抽取，不生成战术结论。
+- 主结果仍包含所有 `play_pattern`；来源字段保留在证据包，Regular Play 作为
+  敏感性拆分。
 
 ## 决定
 
@@ -47,6 +50,9 @@ updated_at: 2026-07-30T19:18:35+08:00
 - `From Counter` 直接采用 StatsBomb 标签，不维护自定义反击分类。
 - 进球模式必须区分 possession 来源与直接得分机制。
 - 点球事件可以确认 foul 双方、位置和 penalty 标签，不能确认接触方式或判罚正确性。
+- 工具箱采用一个深接口而非为漏斗、反击和进球各建脚本；CLI 只处理文件加载和
+  输出格式，Notebook 负责问题、可视化与解释。
+- 测试只覆盖高风险的定义与 ID 关联，不为课程叙事机械制造 expected output。
 
 ## 检查
 
@@ -54,15 +60,24 @@ updated_at: 2026-07-30T19:18:35+08:00
 - 进入事件：117 条，ID 唯一且全部满足 `start_x < 80 <= end_x`。
 - 进入控球：78个 possession ID 唯一；后续41个到达禁区、17个形成射门。
 - Notebook 已使用分析依赖从干净 kernel 自上而下执行成功。
-- Notebook 已从干净 kernel 执行：31个 cells、6张输出图、0个存储错误。
+- Notebook 已从干净 kernel 执行：32个 cells、6张输出图、0个存储错误。
 - 四球事件 ID、关键助攻和 Ramos 成对 foul 关系已有断言。
 - 已视觉检查四球事件链图，确认来源 restart、助攻、回收、犯规和射门标记可读。
+- 真实比赛 `match-evidence` 输出：117次进入、78个进入控球、2个
+  `From Counter` possession、4个进球；球队汇总与 Notebook 一致。
+- `uv lock --check`：通过。
+- `uv run ruff format --check .`：通过。
+- `uv run ruff check .`：通过。
+- `uv run pytest`：19个测试通过。
+- `uv run --group notebook python scripts/validate_notebook.py
+  course/templates/analysis.ipynb`：通过。
+- `uv run --group notebook --group analysis python scripts/validate_notebook.py
+  course/lessons/00-01-orientation/analysis.ipynb`：从干净 kernel 通过。
 - `scripts/validate_course.py` 在当前仓库中不存在；旧 AGENTS 命令无法执行，
   已改为直接检查 lesson ID、handoff frontmatter 与 checkpoint 字段。
 
 ## 开放问题
 
-- 主比较应展示所有进入，还是把 Regular Play 与定位球/界外球来源分开？
-- 四球事实分类是否符合学习者对“模式”的理解？
-- 下一步应比较机会质量、定位球制造，还是最后一传与射门方式？
-- 在不看视频的前提下，哪条事件链最值得继续下钻？
+- 学习者是否认可把“可复用证据接口 + Notebook 解释”作为每课工具箱的模式？
+- `findings.md` 对本课可回答和不可直接回答问题的划分是否准确？
+- 00-01 是否可以完成，并把下一步切换到 00-02 的事件表表示？

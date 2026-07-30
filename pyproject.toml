@@ -9,6 +9,7 @@ dependencies = []
 
 [project.scripts]
 catalog = "football_analytics.catalog_cli:main"
+match-evidence = "football_analytics.evidence_cli:main"
 
 [dependency-groups]
 notebook = [

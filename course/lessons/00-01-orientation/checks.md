@@ -14,8 +14,8 @@
 - [x] 两支球队都存在 lineup 记录。
 - [x] event ID 在本场比赛内唯一。
 - [x] 所有 360 `event_uuid` 都能关联到一个 event。
-- [ ] 检查核心字段缺失及其含义。
-- [ ] 检查坐标范围和进攻方向。
+- [ ] 检查核心字段缺失及其含义（转入 00-02 的事件表课程）。
+- [ ] 检查坐标范围和进攻方向（转入 00-03 的坐标与质量课程）。
 
 ## 当前记录数
 
@@ -63,6 +63,8 @@
 - [x] Modrić：`From Goal Kick`，长球未成功；Rodrygo 高位 Ball Recovery 后助攻，
   Modrić 完成 Dribble 后射门。
 - [x] 两个 `From Counter` possession 均未产生本场进球；不自定义第二套反击标签。
+- [x] `match-evidence` 从原始 events 重现117次进入、78个进入控球、2个
+  `From Counter` possession 和4个进球。
 
 | 进球 | possession 来源 | 直接得分链 | xG |
 | --- | --- | --- | ---: |
@@ -80,4 +82,5 @@
 - [x] 解释 event、360 frame 和 visible_area 的差异。
 - [x] 对四球事件链图完成视觉检查。
 - [x] 将当前图表结果按证据阶梯分类。
-- [ ] 决定主结果展示全部 play pattern，还是单独展示 Regular Play。
+- [x] 主结果保留全部 play pattern，并把来源字段保留在证据包；Regular Play
+  作为敏感性拆分，不静默改变主样本。

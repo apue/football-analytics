@@ -1,6 +1,6 @@
 # 00-01 仓库、数据与证据边界
 
-Status: in_progress
+Status: review
 
 ## 足球问题
 
@@ -60,6 +60,7 @@ Hudl StatsBomb 开放数据实际包含什么？仅凭这些数据，哪些比�
 ## 产物
 
 - `analysis.ipynb`：进入事件、possession 结果、比分状态和四球事件链的可视化分析
+- `football_analytics.evidence` 与 `match-evidence`：可复用的单场比赛证据接口
 - `findings.md`：数据地图、三类可回答问题、三类不可直接回答问题
 - `checks.md`：路径、文件、比赛 ID、记录数和关键字段检查
 - `exercises.md`：改变 play pattern 或比赛样本后复算指标
