@@ -2,29 +2,29 @@
 lesson_id: <lesson-id>
 status: ready
 checkpoint_id: CP-000
-current_step: <Current bounded learning unit>
-next_action: <One concrete action another agent can start>
+current_step: <当前有边界的学习单元>
+next_action: <下一位 Agent 可以直接开始的具体动作>
 updated_at: YYYY-MM-DDTHH:MM:SS+HH:MM
 ---
 
-# Handoff
+# 课程交接
 
-## Completed
+## 已完成
 
-- <Work completed and files changed>
+- <已经完成的学习内容>
 
-## Current Work
+## 当前工作
 
-- <In-progress work, or state that no work has started>
+- <正在进行的工作，或尚未开始>
 
-## Decisions
+## 决定
 
-- <Definition or decision and rationale>
+- <定义或决定及其理由>
 
-## Validation
+## 检查
 
-- `<command>`: pass | fail - <important result>
+- <与当前学习单元相关的方法、结果或尚未运行的检查>
 
-## Open Questions
+## 开放问题
 
-- <Question, limitation, or blocker>
+- <问题、限制或阻碍>

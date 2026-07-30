@@ -1,29 +1,27 @@
-# Exercises
+# 练习
 
-## Explain
+## 解释
 
-Without reading the implementation, explain:
+不阅读实现代码，解释：
 
-- What question the main output answers.
-- What one row or sample represents.
-- Which conclusion is strongest and which is most uncertain.
+- 主要产物回答了什么问题。
+- 一行数据或一个样本代表什么。
+- 哪项结论最可靠，哪项最不确定。
 
-## Transfer
+## 迁移
 
-Repeat the analysis for a different match, team, player, or time window. Predict
-the result before running it.
+换一场比赛、球队、球员或时间范围重复分析，并在运行前预测结果。
 
-## Challenge a Definition
+## 质疑定义
 
-Change one metric definition or threshold. Explain whether the conclusion
-changes and what that reveals.
+改变一个指标定义或阈值，说明结论是否变化，以及这说明了什么。
 
-## Next Question
+## 下一个问题
 
-Turn one anomaly or limitation into a question with:
+将一个异常或限制转化为问题，包含：
 
-- research object;
-- football behavior;
-- outcome;
-- comparison baseline;
-- context.
+- 研究对象；
+- 足球行为；
+- 结果；
+- 比较基准；
+- 场景范围。

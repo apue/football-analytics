@@ -7,19 +7,16 @@ explanation.
 
 ## Session Startup
 
-Before changing anything:
+Before lesson work:
 
-1. `README.md`
-2. `course/syllabus.md`
-3. `course/state.yaml`
-4. The active lesson's `brief.md` and `handoff.md`
-5. `docs/methodology.md`
-6. `docs/agent-workflow.md`
+1. Read `course/state.yaml`.
+2. Read the active lesson's `brief.md` and `handoff.md`.
+3. Read the relevant parts of `course/syllabus.md`, `docs/methodology.md`, and
+   `docs/data-guide.md`.
 
 Then inspect `git status`, `git log --oneline -5`, and any post-commit diff.
-Present the current lesson, latest recoverable commit, worktree state, and next
-action before continuing. Never discard or auto-commit post-checkpoint changes.
-Treat tracked course state as authoritative over prior chat summaries.
+Summarize the current lesson, latest recoverable commit, uncommitted work, and
+next action before resuming. Never discard or auto-commit existing changes.
 
 ## Scope
 
@@ -46,32 +43,20 @@ During implementation:
 - Make randomness deterministic.
 - Record the upstream open-data commit in completed findings.
 
-Before finishing:
+When a lesson enters review:
 
 - Restart and execute notebooks top-to-bottom.
-- Run the validation commands required by the lesson and repository.
+- Run the checks required by the lesson and changed implementation.
 - Update `findings.md`, `checks.md`, `exercises.md`, and `handoff.md`.
 - Update `course/state.yaml` only when global navigation changes.
+- Explain the outputs and limitations to the learner.
 
 ## Turn Completion And Checkpoints
 
-Use `$course-turn-checkpoint` whenever a turn modified the repository. Start
-with `git status --short`; if clean, finish without extra work. If dirty,
-inspect the diff and reason separately about:
-
-1. whether the current change is coherent and ready to commit;
-2. whether a focused check is needed to make that decision;
-3. whether learning progress advanced enough to update the active handoff.
-
-Do not run generic tests merely because files changed. Do not update the lesson
-handoff for technical cleanup alone. Leave unfinished work uncommitted with a
-clear explanation.
-
-When a coherent learning unit and its handoff snapshot are ready, commit
-locally as `checkpoint(<lesson-id>): CP-NNN <step>`. A pause or block may also
-be checkpointed if the handoff states what remains and which relevant checks
-were not run or failed. Use a normal commit for coherent non-learning work.
-Never push merely because a turn ended.
+Use `$course-turn-checkpoint` after any turn that modifies the repository. The
+Skill owns the decision to run a focused check, update the lesson handoff, leave
+work uncommitted, or create a local commit. Never push merely because a turn
+ended.
 
 ## Explanation Contract
 
@@ -89,12 +74,10 @@ metric result, football interpretation, or unverified hypothesis.
 
 ## Validation
 
-Choose checks from the current diff and analytical risk. Prose and course-state
-changes usually need inspection, not a test suite. Deterministic reusable code
-gets focused tests. Check notebook sections while building them; execute a
-changed lesson notebook from a clean kernel when it enters review. Never claim
-a lesson is complete from a successful cell run in an existing interactive
-kernel.
+Choose checks from the current diff, lesson acceptance criteria, and analytical
+risk. Execute a changed lesson notebook from a clean kernel when it enters
+review. Never claim a lesson is complete from a successful cell run in an
+existing interactive kernel.
 
 Before an explicit push or PR update, inspect the full branch diff, run all
 relevant repository and lesson checks, and repair failures in a bounded loop.
@@ -104,15 +87,13 @@ CI is the final branch-wide gate.
 
 The handoff frontmatter is the latest resumable snapshot. Its body must state:
 
-- completed work and changed files;
+- completed learning work and the current boundary;
 - decisions and definitions introduced;
-- validation commands and results;
+- relevant checks, results, and checks not yet run;
 - unresolved questions or limitations.
 
 Do not leave essential context only in the chat transcript.
 
-At lesson end, checkpoint `review`, run the relevant full validation, and
-explain the outputs to the learner. After the learner accepts completion,
-checkpoint `completed`, update global navigation, push the lesson branch, open
-one lesson PR, and observe CI. Squash merge only after explicit merge
-confirmation.
+After the learner accepts completion, checkpoint `completed`, update global
+navigation, push the lesson branch, open one lesson PR, and observe CI. Squash
+merge only after explicit merge confirmation.

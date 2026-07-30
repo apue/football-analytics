@@ -1,38 +1,37 @@
-# Findings
+# 发现
 
-## Research Question
+## 研究问题
 
-<Restate the bounded question.>
+<重述已经限定范围的问题。>
 
-## Data Scope
+## 数据范围
 
-- Competition and season:
-- Matches or samples:
-- Upstream commit:
-- Exclusions:
+- 赛事和赛季：
+- 比赛或样本：
+- 上游 commit：
+- 排除项：
 
-## Results
+## 结果
 
-### Finding 1
+### 发现 1
 
-- Evidence level: data fact | metric result | football interpretation |
-  unverified hypothesis
-- Result:
-- Football meaning:
-- What this does not establish:
+- 证据层级：数据事实 | 指标结果 | 足球解释 | 未验证假设
+- 结果：
+- 足球含义：
+- 不能据此确认的内容：
 
-## Sensitivity and Counterevidence
+## 敏感性与反证
 
-- Alternative definitions:
-- Contrary examples:
-- Stability checks:
+- 替代定义：
+- 反例：
+- 稳定性检查：
 
-## Limitations
+## 限制
 
-- Event-data visibility:
-- Sample and context:
-- Measurement:
+- 事件数据的可见范围：
+- 样本与语境：
+- 测量：
 
-## Conclusion
+## 结论
 
-<Separate supported conclusion from the next hypothesis.>
+<区分已有证据支持的结论与下一步假设。>

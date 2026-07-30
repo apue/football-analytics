@@ -1,12 +1,13 @@
 ---
 name: course-turn-checkpoint
-description: Review repository changes at the end of a Codex turn and decide whether they need a focused check, a lesson handoff update, and a local commit. Use after a turn modifies this football-analytics repository, when a Stop hook reports a dirty worktree, when the learner asks to pause or checkpoint work, or before pushing a lesson branch.
+description: Review repository changes at the end of a Codex turn and decide whether they need a focused check, a lesson handoff update, and a local commit. Use after a turn modifies this football-analytics repository, when a Stop hook reports a dirty worktree, or when the learner asks to pause or checkpoint work.
 ---
 
 # Course Turn Checkpoint
 
 Treat Git as the recovery mechanism and `handoff.md` as the latest learning
-snapshot. Do not turn checkpoints into a generic validation framework.
+snapshot. Use checkpoints as recoverable snapshots and choose checks from the
+analytical risk of the current change.
 
 ## Close a turn
 
@@ -34,8 +35,8 @@ passing generic test suite cannot decide whether learning progressed.
 
 ## Choose checks
 
-Do not run tests merely because the worktree is dirty. Run the smallest check
-that resolves a real uncertainty introduced by the diff:
+Run the smallest check that resolves a real uncertainty introduced by the
+diff. A dirty worktree alone does not require tests:
 
 - pure prose or course-state edits usually need diff review only;
 - reusable deterministic code should get a focused test or direct exercise;
@@ -70,14 +71,3 @@ Preserve unrelated changes.
 - For a coherent non-learning change, use a normal conventional commit.
 - Never push merely because a turn ended.
 - If the change is not ready, leave it uncommitted and say why.
-
-## Resume and deliver
-
-At session start, read `course/state.yaml`, the active `brief.md` and
-`handoff.md`, then inspect `git status`, `git log --oneline -5`, and any diff.
-Summarize the latest recoverable commit, post-commit work, and next action
-before continuing.
-
-On an explicit push or PR request, inspect the complete branch diff, choose the
-relevant full checks, repair failures in a bounded loop, then push. Do not merge
-without explicit learner confirmation.

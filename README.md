@@ -48,20 +48,6 @@ uv sync --group notebook --group analysis
 uv run jupyter lab
 ```
 
-软件或模板发生变化时，按 diff 选择相关检查：
-
-```bash
-uv lock --check
-uv run ruff format --check .
-uv run ruff check .
-uv run pytest
-uv run python scripts/validate_notebook.py course/templates/analysis.ipynb
-```
-
-纯课程文本没有通用的 expected output，不为提交它而机械运行整套检查。实际
-lesson Notebook 在分析过程中做针对性检查，并在进入 review 时从干净 kernel
-完整执行。
-
 ## 数据约定
 
 公开数据被独立克隆到：
@@ -89,22 +75,11 @@ git -C data/external/statsbomb-open-data rev-parse HEAD
 StatsBomb 要求公开分析注明数据来源并使用其标识。具体使用前请阅读上游仓库的
 README 和许可说明。本项目不重新分发上游数据。
 
-## 如何恢复课程
+## 继续课程
 
-新 session 读取 `course/state.yaml`、活动课的 `brief.md` 和 `handoff.md`，
-再查看 `git status`、最近提交和现有 diff。Agent 先说明最近可恢复提交、
-checkpoint 后的未提交工作和下一步，再继续。
-
-仓库内的 `$course-turn-checkpoint` Skill 负责每轮结束时的语义判断：
-只有 worktree dirty 才检查当前 diff，并分别判断它是否可提交、是否需要一个
-最小检查，以及学习进度是否值得更新 handoff。`.codex/hooks.json` 只用一次
-`git status --porcelain` 提醒 Agent 进入这个判断，不运行测试也不提交；首次使用
-需要在 Codex 的 `/hooks` 中审查并信任该项目 hook。
-
-有意义且可恢复的学习单元形成本地 `CP-NNN` checkpoint，课中不 push。技术整理
-可以使用普通 commit，且不会因此改写学习 handoff。课末经学习者审查后统一
-push，通过单课 PR、CI 和明确确认后的 squash merge 交付。设计边界见
-[docs/project-design.md](docs/project-design.md)。
+`course/state.yaml` 指向当前课程。对应 lesson 的 `brief.md` 定义问题、范围和
+验收标准，`handoff.md` 记录已经完成的内容、当前步骤和下一步。新 session 从这些
+文件和现有 Git 改动继续。
 
 ## 计算资源
 

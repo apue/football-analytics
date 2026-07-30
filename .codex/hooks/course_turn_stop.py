@@ -30,11 +30,8 @@ def main() -> int:
             {
                 "decision": "block",
                 "reason": (
-                    "The worktree is dirty. Use $course-turn-checkpoint now: "
-                    "inspect the diff, decide whether a focused check is needed, "
-                    "whether the change is ready to commit, and whether learning "
-                    "progress requires a handoff update. Do not run generic tests "
-                    "or commit solely because this hook fired."
+                    "The worktree is dirty. Use $course-turn-checkpoint "
+                    "before finishing this turn."
                 ),
             }
         )

@@ -1,30 +1,30 @@
-# Checks
+# 检查
 
-## Data Integrity
+## 数据完整性
 
-- [ ] Source commit recorded.
-- [ ] Expected files exist.
-- [ ] IDs join without unexpected loss.
-- [ ] Missing and duplicate records inspected.
-- [ ] Coordinates and attacking direction checked.
+- [ ] 已记录数据源 commit。
+- [ ] 所需文件存在。
+- [ ] ID 关联没有意外损失。
+- [ ] 已检查缺失与重复记录。
+- [ ] 已检查坐标和进攻方向。
 
-## Metric Integrity
+## 指标完整性
 
-- [ ] Unit of analysis is explicit.
-- [ ] Numerator and denominator are reconciled.
-- [ ] Edge cases are covered.
-- [ ] Result is compared with a simple baseline.
-- [ ] Alternative threshold or definition is tested.
+- [ ] 分析单位明确。
+- [ ] 分子与分母能够核对。
+- [ ] 已处理相关边缘情况。
+- [ ] 结果与简单基准比较。
+- [ ] 已检查相关的替代阈值或定义。
 
-## Reproducibility
+## 可复现性
 
-- [ ] Notebook runs top-to-bottom from a clean kernel.
-- [ ] Reusable logic has tests.
-- [ ] Randomness is seeded.
-- [ ] Generated data can be rebuilt.
+- [ ] Notebook 可以从干净 kernel 自上而下执行。
+- [ ] 本课新增的可复用确定性逻辑有与风险相称的检查。
+- [ ] 随机过程设置了种子。
+- [ ] 生成数据可以重新构建。
 
-## Results
+## 结果
 
-| Check | Command or method | Result | Follow-up |
-|---|---|---|---|
-| <check> | <method> | pass/fail | <action> |
+| 检查 | 命令或方法 | 结果 | 后续动作 |
+| --- | --- | --- | --- |
+| <检查> | <方法> | 通过/失败 | <动作> |

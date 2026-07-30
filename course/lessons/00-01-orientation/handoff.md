@@ -2,35 +2,30 @@
 lesson_id: 00-01-orientation
 status: ready
 checkpoint_id: CP-000
-current_step: Confirm the orientation lesson starting point
-next_action: Inspect available data coverage and propose one match for learner review
+current_step: 确认导论课程的起点
+next_action: 检查可用数据范围并提出一场比赛供学习者确认
 updated_at: 2026-07-30T11:08:42+08:00
 ---
 
-# Handoff
+# 课程交接
 
-## Completed
+## 已完成
 
-- Repository bootstrap and course contract defined.
-- Upstream data sync path established.
-- Lesson question, inputs, outputs, and acceptance criteria written.
-- Course resume and local checkpoint workflow initialized.
+- 已定义课程问题、输入、产物和验收标准。
 
-## Current Work
+## 当前工作
 
-- The lesson is ready; no data-backed analysis has started.
+- 课程已经就绪，尚未开始数据分析。
 
-## Decisions
+## 决定
 
-- This lesson maps data before performing football performance analysis.
-- The first match will be selected after inspecting actual open-data coverage.
+- 本课先建立数据地图，再进行足球表现分析。
+- 检查开放数据的实际覆盖范围后再选择第一场比赛。
 
-## Validation
+## 检查
 
-- CP-000 repository checks passed when the lesson snapshot was initialized.
-- No lesson analysis notebook has been created yet.
+- 尚未选择或分析本课数据。
 
-## Open Questions
+## 开放问题
 
-- Which competition and match provide the clearest combination of events,
-  lineups, and optional 360 data?
+- 哪项赛事和比赛能够提供最清晰的事件、阵容和可选 360 数据组合？
