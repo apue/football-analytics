@@ -14,8 +14,9 @@ resume.
 - The active lesson's `handoff.md` is the only resumable course snapshot.
 - Git checkpoint commits are the recovery history; no parallel journal, agent
   memory, or evaluation tree is maintained.
-- `.codex/skills/course-turn-checkpoint/` contains the turn-end judgment
-  workflow; `.codex/hooks.json` only detects a dirty worktree and invokes it.
+- `.codex/hooks.json` registers the Stop hook;
+  `.codex/hooks/course_turn_stop.py` detects a dirty worktree and hands the
+  semantic decision to `.codex/skills/course-turn-checkpoint/`.
 - `src/football_analytics/` contains reusable analysis utilities.
 - Notebooks orchestrate lesson analysis and narrative; reusable definitions do
   not live only in notebooks.
