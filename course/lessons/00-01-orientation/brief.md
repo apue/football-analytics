@@ -9,8 +9,8 @@ Hudl StatsBomb 开放数据实际包含什么？仅凭这些数据，哪些比�
 
 本课用一个具体问题作为入门主线：Barcelona 和 Real Madrid 怎样进入进攻三区？
 一次控球首次进入后，有多大概率到达禁区、形成射门并产生 xG，这种差异是否随
-比分状态改变？进一步的问题是：所谓“快速转换”和“防守未落位”在行业中如何
-定义，event 与 360 数据能观察到其中哪些部分？
+比分状态改变？四个进球各自由什么事件链形成，possession 来源标签与直接得分
+机制是否一致？
 
 ## 为什么从这里开始
 
@@ -25,16 +25,15 @@ Hudl StatsBomb 开放数据实际包含什么？仅凭这些数据，哪些比�
 - 解释 Pass、Carry、Shot 和 possession 的核心字段与分析单位。
 - 定义进入进攻三区，并区分事件次数与进入三区的控球次数。
 - 比较进入后到达禁区、形成射门和产生 xG 的结果。
-- 区分供应商的 `From Counter` 标签与透明、可调的快速转换代理。
-- 使用 360 防守恢复代理筛选场景，同时说明 visible_area 的观察限制。
+- 区分进球 possession 的来源标签与最后直接得分事件链。
+- 使用关联的 Foul Committed/Foul Won 解释点球的数据事实与证据边界。
 - 使用证据阶梯评价一个足球结论。
 
 ## 分析单位
 
-本课涉及赛事赛季、比赛、单个事件、一次 StatsBomb possession 和 control spell。
-事件级结果描述进入方式；结果比较以每次控球第一次成功进入为单位。转换实验把
-control spell 定义为同一 possession 内由同一球队连续控制的事件段，以处理短暂
-球权变化；不聚合球员能力或球队风格。
+本课涉及赛事赛季、比赛、单个事件和一次 StatsBomb possession。事件级结果描述
+进入方式；结果比较以每次控球第一次成功进入为单位。进球审计则以 Shot 为终点，
+向前关联助攻、犯规、restart 和球权回收；不聚合球员能力或球队风格。
 
 ## 输入
 
@@ -60,8 +59,7 @@ control spell 定义为同一 possession 内由同一球队连续控制的事件
 
 ## 产物
 
-- `analysis.ipynb`：进入事件、possession 结果、比分状态和转换场景的可视化分析
-- `docs/research/fast-transition-and-defensive-organization.md`：行业定义与数据可见性
+- `analysis.ipynb`：进入事件、possession 结果、比分状态和四球事件链的可视化分析
 - `findings.md`：数据地图、三类可回答问题、三类不可直接回答问题
 - `checks.md`：路径、文件、比赛 ID、记录数和关键字段检查
 - `exercises.md`：改变 play pattern 或比赛样本后复算指标
@@ -72,9 +70,9 @@ control spell 定义为同一 possession 内由同一球队连续控制的事件
 - 记录上游 open-data commit。
 - 能说明一次进入事件与一次进入三区的 possession 为什么不是同一分析单位。
 - 审计四个进球是否满足此前存在成功三区进入的定义。
-- 能说明为什么快速转换没有统一数值阈值，以及 `From Counter` 不是公开公式。
-- 能解释 possession、control spell 与定位球 restart 的区别。
-- 能把 360 球门侧可见防守人数称为代理，而不是完整防线事实。
+- 能为四球分别说明 possession 来源、直接助攻或犯规链和射门方式。
+- 能说明为什么 `From Free Kick` 或 `From Goal Kick` 不等于直接定位球得分。
+- 能说明 event data 对点球原因能确认到哪一步、哪些仍需视频。
 - 能说明 event data 缺少哪些解释比分差异所需的空间或视频证据。
 - 所有解释性结论标注证据层级。
 - 不把事件数据描述为完整的比赛现实。

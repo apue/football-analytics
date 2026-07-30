@@ -53,28 +53,23 @@
 | Barcelona | 44 | 25 | 8 | 1.101 | 1 |
 | Real Madrid | 34 | 16 | 9 | 1.500 | 2 |
 
-## 快速转换与防守恢复实验
+## 四个进球的事件链
 
-- [x] 查证行业没有统一的秒数、传球数或推进距离定义。
-- [x] 保留 StatsBomb `From Counter` 作为供应商基线，不将其反推为公开公式。
-- [x] 将 control spell 定义为同一 possession 内连续由同一球队控制的事件段；
-  定位球 restart 另开一段。
-- [x] 得到 308 个 control spells，其中 50 个属于开放比赛夺回后、从三区外完成
-  首次进入的 spell。
-- [x] 对进入三区用时使用 5/10/15 秒敏感性，不选择唯一“正确”阈值。
-- [x] 360 指标只计算 visible_area 内的球门侧防守者和最近防守者。
-- [x] 四个进球按最终 control spell 重新审计，没有用进球调整阈值。
+- [x] 四个 Goal Shot 的 event index、possession、play pattern 和 xG 已核对。
+- [x] Valverde：`From Keeper`，约60秒 possession，Benzema 直塞助攻，单刀。
+- [x] Fati：`From Free Kick`，Messi 直塞 Alba，Alba 低平球助攻，一脚完成。
+- [x] Ramos：Kroos 高球任意球后，Lenglet/Ramos 的两个 foul 事件成对关联且
+  均标记 `penalty=True`。
+- [x] Modrić：`From Goal Kick`，长球未成功；Rodrygo 高位 Ball Recovery 后助攻，
+  Modrić 完成 Dribble 后射门。
+- [x] 两个 `From Counter` possession 均未产生本场进球；不自定义第二套反击标签。
 
-| 进入时间窗 | 候选 spells | Barcelona | Real Madrid | From Counter 重合 | 12 秒内射门 |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| 5 秒 | 14 | 8 | 6 | 0 | 2 |
-| 10 秒 | 24 | 14 | 10 | 2 | 2 |
-| 15 秒 | 33 | 16 | 17 | 2 | 2 |
-
-StatsBomb 标记的两个 `From Counter` 都属于 Barcelona，且没有形成射门。四个
-进球中，只有 Modrić 的最终 control spell 是开放比赛重新夺回后 12 秒内进球：
-从 `x=106.3` 的 Ball Recovery 到射门为 3.342 秒。Valverde 为 59.882 秒，
-Fati 来自任意球，Ramos 为点球。
+| 进球 | possession 来源 | 直接得分链 | xG |
+| --- | --- | --- | ---: |
+| Valverde 5' | From Keeper | Benzema through ball → 单刀 | 0.312 |
+| Fati 8' | From Free Kick | Messi through ball → Alba 低平球 → 一脚射门 | 0.396 |
+| Ramos 63' | 任意球后形成点球 | Kroos 高球 → Lenglet foul → 点球 | 0.784 |
+| Modrić 90' | From Goal Kick | Rodrygo 高位回收 → Modrić 过人 → 射门 | 0.294 |
 
 ## 后续验证
 
@@ -83,6 +78,6 @@ Fati 来自任意球，Ramos 为点球。
 - [x] 解释进入事件与进入三区 possession 的分析单位差异。
 - [x] 对球队结果率和比分状态图完成视觉检查。
 - [x] 解释 event、360 frame 和 visible_area 的差异。
-- [x] 对转换散点图、进球时间图和 Modrić 360 对照图完成视觉检查。
+- [x] 对四球事件链图完成视觉检查。
 - [x] 将当前图表结果按证据阶梯分类。
 - [ ] 决定主结果展示全部 play pattern，还是单独展示 Regular Play。
