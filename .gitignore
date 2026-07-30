@@ -9,6 +9,9 @@ __pycache__/
 .coverage
 htmlcov/
 .ipynb_checkpoints/
+build/
+dist/
+*.egg-info/
 
 # Independently cloned source data and reproducible derived data.
 data/external/*

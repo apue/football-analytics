@@ -7,6 +7,7 @@ Status: bootstrap
 - `src/football_analytics/`: reusable Python package.
 - `tests/`: package and repository contract tests.
 - `scripts/`: data synchronization and repository validation commands.
+- `.github/workflows/`: pull-request and default-branch validation.
 - `course/syllabus.md`: curriculum map and prerequisites.
 - `course/state.yaml`: current learning and handoff state.
 - `course/lessons/`: lesson-specific work.

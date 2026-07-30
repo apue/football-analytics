@@ -26,5 +26,5 @@ history. No lesson notebook has been created yet.
 
 ## Next Action
 
-Inspect `competitions.json` and available data directories, then propose one
-match for the learner to approve or challenge before analysis.
+Inspect `data/competitions.json` and available data directories, then propose
+one match for the learner to approve or challenge before analysis.
