@@ -36,7 +36,7 @@ uv sync --group notebook
 uv sync --group notebook --group analysis
 ```
 
-同步公开数据的 Git 元数据和顶层文件：
+同步公开数据的赛事与比赛目录：
 
 ```bash
 ./scripts/sync_open_data.sh
@@ -63,8 +63,16 @@ git -C data/external/statsbomb-open-data pull --ff-only
 ```
 
 上游仓库体积较大，因此首次同步采用 shallow partial clone 和 sparse checkout，
-不会立刻下载全部比赛文件。进入具体课程时，再按所选赛事和比赛扩展 sparse
-checkout；具体选择会记录在 lesson 的 `brief.md` 和 `checks.md`。
+只下载赛事与比赛元数据，不会立刻下载大型事件文件。可用本地目录搜索比赛：
+
+```bash
+uv run catalog resolve team "巴塞罗那"
+uv run catalog seasons --competition-id 11 --team-id 217
+```
+
+确认比赛后再用 `uv run catalog fetch --match-id <id>` 按需取得 events、lineups
+和可用的 360；具体选择会记录在 lesson 的 `brief.md` 和 `checks.md`。完整命令和
+覆盖范围约定见 [docs/data-guide.md](docs/data-guide.md)。
 
 发布分析时应记录数据源 commit：
 

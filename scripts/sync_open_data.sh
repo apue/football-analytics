@@ -31,10 +31,19 @@ else
     --no-cone \
     /README.md \
     /LICENSE.pdf \
-    /data/competitions.json
+    /data/competitions.json \
+    /data/matches/
   mv "${CLONE_ROOT}/repository" "${OPEN_DATA_ROOT}"
   trap - EXIT
   rmdir "${CLONE_ROOT}"
+fi
+
+if [[ "$(git -C "${OPEN_DATA_ROOT}" config --bool core.sparseCheckout)" == "true" ]]; then
+  git -C "${OPEN_DATA_ROOT}" sparse-checkout add \
+    /README.md \
+    /LICENSE.pdf \
+    /data/competitions.json \
+    /data/matches/
 fi
 
 git -C "${OPEN_DATA_ROOT}" rev-parse HEAD
