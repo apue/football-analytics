@@ -1,50 +1,50 @@
-# <lesson-id> <title>
+# <lesson-id> <标题>
 
 Status: draft
 
-## Football Question
+## 足球问题
 
-<Object + behavior + outcome + comparison baseline + context.>
+<研究对象 + 足球行为 + 结果 + 比较基准 + 场景范围。>
 
-## Why It Matters
+## 为什么值得研究
 
-<What understanding or decision could change after answering this question?>
+<回答这个问题后，哪些理解或判断可能改变？>
 
-## Learning Objectives
+## 学习目标
 
-- <Objective>
+- <目标>
 
-## Scope
+## 范围
 
-- Unit of analysis:
-- Included competitions, seasons, matches, or events:
-- Exclusions:
-- Comparison baseline:
-- Outcome:
+- 分析单位：
+- 包含的赛事、赛季、比赛或事件：
+- 排除项：
+- 比较基准：
+- 结果：
 
-## Definitions and Assumptions
+## 定义与假设
 
-| Term | Operational definition | Alternative considered |
-|---|---|---|
-| <term> | <definition> | <alternative> |
+| 术语 | 操作性定义 | 考虑过的替代定义 |
+| --- | --- | --- |
+| <术语> | <定义> | <替代定义> |
 
-## Required Data
+## 所需数据
 
-- Files:
-- Fields:
-- Upstream commit:
+- 文件：
+- 字段：
+- 上游 commit：
 
-## Expected Outputs
+## 预期产物
 
-- `analysis.ipynb`:
-- `findings.md`:
-- `checks.md`:
-- `exercises.md`:
+- `analysis.ipynb`：
+- `findings.md`：
+- `checks.md`：
+- `exercises.md`：
 
-## Acceptance Criteria
+## 验收标准
 
-- [ ] <Observable completion condition>
+- [ ] <可观察的完成条件>
 
-## Pre-Analysis Prediction
+## 分析前预测
 
-<Learner records an expectation before seeing the result.>
+<学习者在看到结果前记录预期。>

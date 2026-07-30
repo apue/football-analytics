@@ -23,10 +23,17 @@ Coding Agent 负责实现、测试和解释代码；学习者负责问题、假�
 
 ## 本地启动
 
-需要 Git、[uv](https://docs.astral.sh/uv/) 和 Python 3.12。安装全部课程依赖：
+需要 Git、[uv](https://docs.astral.sh/uv/) 和 Python 3.12。安装基础开发和
+Notebook 环境：
 
 ```bash
-uv sync --all-groups
+uv sync --group notebook
+```
+
+进入需要 pandas 和绘图的分析课时再运行：
+
+```bash
+uv sync --group notebook --group analysis
 ```
 
 同步公开数据的 Git 元数据和顶层文件：
@@ -39,17 +46,6 @@ uv sync --all-groups
 
 ```bash
 uv run jupyter lab
-```
-
-运行项目检查：
-
-```bash
-uv lock --check
-uv run ruff format --check .
-uv run ruff check .
-uv run pytest
-uv run python scripts/validate_course.py
-uv run python scripts/validate_notebook.py course/templates/analysis.ipynb
 ```
 
 ## 数据约定
@@ -79,17 +75,11 @@ git -C data/external/statsbomb-open-data rev-parse HEAD
 StatsBomb 要求公开分析注明数据来源并使用其标识。具体使用前请阅读上游仓库的
 README 和许可说明。本项目不重新分发上游数据。
 
-## 如何恢复课程
+## 继续课程
 
-新的学习或 Agent session 按以下顺序读取：
-
-1. `README.md`
-2. `AGENTS.md`
-3. `course/syllabus.md`
-4. `course/state.yaml`
-5. 当前 lesson 的 `brief.md` 与 `handoff.md`
-
-当前状态以仓库文件和 Git 历史为准，不依赖旧聊天记录。
+`course/state.yaml` 指向当前课程。对应 lesson 的 `brief.md` 定义问题、范围和
+验收标准，`handoff.md` 记录已经完成的内容、当前步骤和下一步。新 session 从这些
+文件和现有 Git 改动继续。
 
 ## 计算资源
 

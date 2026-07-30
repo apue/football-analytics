@@ -1,30 +1,31 @@
-# Handoff
+---
+lesson_id: 00-01-orientation
+status: ready
+checkpoint_id: CP-000
+current_step: 确认导论课程的起点
+next_action: 检查可用数据范围并提出一场比赛供学习者确认
+updated_at: 2026-07-30T11:08:42+08:00
+---
 
-Status: ready
-Last updated: 2026-07-29
+# 课程交接
 
-## Completed
+## 已完成
 
-- Repository bootstrap and course contract defined.
-- Upstream data sync path established.
-- Lesson question, inputs, outputs, and acceptance criteria written.
+- 已定义课程问题、输入、产物和验收标准。
 
-## Decisions
+## 当前工作
 
-- This lesson maps data before performing football performance analysis.
-- The first match will be selected after inspecting actual open-data coverage.
+- 课程已经就绪，尚未开始数据分析。
 
-## Validation
+## 决定
 
-Bootstrap validation is recorded in the initial repository handoff and Git
-history. No lesson notebook has been created yet.
+- 本课先建立数据地图，再进行足球表现分析。
+- 检查开放数据的实际覆盖范围后再选择第一场比赛。
 
-## Open Questions
+## 检查
 
-- Which competition and match provide the clearest combination of events,
-  lineups, and optional 360 data?
+- 尚未选择或分析本课数据。
 
-## Next Action
+## 开放问题
 
-Inspect `data/competitions.json` and available data directories, then propose
-one match for the learner to approve or challenge before analysis.
+- 哪项赛事和比赛能够提供最清晰的事件、阵容和可选 360 数据组合？

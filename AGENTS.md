@@ -7,17 +7,16 @@ explanation.
 
 ## Session Startup
 
-Read these files before changing anything:
+Before lesson work:
 
-1. `README.md`
-2. `course/syllabus.md`
-3. `course/state.yaml`
-4. The active lesson's `brief.md` and `handoff.md`
-5. `docs/methodology.md`
-6. `docs/agent-workflow.md`
+1. Read `course/state.yaml`.
+2. Read the active lesson's `brief.md` and `handoff.md`.
+3. Read the relevant parts of `course/syllabus.md`, `docs/methodology.md`, and
+   `docs/data-guide.md`.
 
-Then inspect `git status` and the relevant existing code. Treat tracked course
-state as authoritative over prior chat summaries.
+Then inspect `git status`, `git log --oneline -5`, and any post-commit diff.
+Summarize the current lesson, latest recoverable commit, uncommitted work, and
+next action before resuming. Never discard or auto-commit existing changes.
 
 ## Scope
 
@@ -44,12 +43,20 @@ During implementation:
 - Make randomness deterministic.
 - Record the upstream open-data commit in completed findings.
 
-Before finishing:
+When a lesson enters review:
 
 - Restart and execute notebooks top-to-bottom.
-- Run the validation commands required by the lesson and repository.
+- Run the checks required by the lesson and changed implementation.
 - Update `findings.md`, `checks.md`, `exercises.md`, and `handoff.md`.
-- Update `course/state.yaml`, including the exact next action.
+- Update `course/state.yaml` only when global navigation changes.
+- Explain the outputs and limitations to the learner.
+
+## Turn Completion And Checkpoints
+
+Use `$course-turn-checkpoint` after any turn that modifies the repository. The
+Skill owns the decision to run a focused check, update the lesson handoff, leave
+work uncommitted, or create a local commit. Never push merely because a turn
+ended.
 
 ## Explanation Contract
 
@@ -67,29 +74,26 @@ metric result, football interpretation, or unverified hypothesis.
 
 ## Validation
 
-Default repository checks:
+Choose checks from the current diff, lesson acceptance criteria, and analytical
+risk. Execute a changed lesson notebook from a clean kernel when it enters
+review. Never claim a lesson is complete from a successful cell run in an
+existing interactive kernel.
 
-```bash
-uv lock --check
-uv run ruff format --check .
-uv run ruff check .
-uv run pytest
-uv run python scripts/validate_course.py
-uv run python scripts/validate_notebook.py course/templates/analysis.ipynb
-```
-
-For a changed notebook, also execute it from a clean kernel. Never claim a
-lesson is complete from a successful cell run in an existing interactive
-kernel.
+Before an explicit push or PR update, inspect the full branch diff, run all
+relevant repository and lesson checks, and repair failures in a bounded loop.
+CI is the final branch-wide gate.
 
 ## Handoff
 
-The final handoff must state:
+The handoff frontmatter is the latest resumable snapshot. Its body must state:
 
-- completed work and changed files;
+- completed learning work and the current boundary;
 - decisions and definitions introduced;
-- validation commands and results;
-- unresolved questions or limitations;
-- one concrete next action.
+- relevant checks, results, and checks not yet run;
+- unresolved questions or limitations.
 
 Do not leave essential context only in the chat transcript.
+
+After the learner accepts completion, checkpoint `completed`, update global
+navigation, push the lesson branch, open one lesson PR, and observe CI. Squash
+merge only after explicit merge confirmation.

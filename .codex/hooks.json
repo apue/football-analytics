@@ -1,0 +1,17 @@
+{
+  "description": "Prompt Codex to review dirty work before ending a turn.",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 .codex/hooks/course_turn_stop.py",
+            "timeout": 5,
+            "statusMessage": "Checking for unreviewed worktree changes"
+          }
+        ]
+      }
+    ]
+  }
+}
