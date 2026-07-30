@@ -27,9 +27,23 @@
 
 这些计数是源数据事实，不表示比赛表现或数据覆盖了比赛现实的全部方面。
 
+## 进攻三区进入分析
+
+- [x] 将一次进入定义为 `start_x < 80 <= end_x`。
+- [x] Pass 只保留没有 `outcome` 的成功传球。
+- [x] Carry 表示持球推进，不将 Dribble 当作持续移动。
+- [x] 保留 `play_pattern` 和 `pass_type`，没有静默排除界外球或定位球来源。
+- [x] 117 个进入事件 ID 唯一，且全部满足定义边界。
+
+| 球队 | Pass | Carry | 合计 |
+| --- | ---: | ---: | ---: |
+| Barcelona | 40 | 23 | 63 |
+| Real Madrid | 34 | 20 | 54 |
+
 ## 后续验证
 
-- [ ] Notebook 从干净 kernel 自上而下执行。
-- [ ] 解释一个 event 对象的分析单位与核心字段。
+- [x] Notebook 从干净 kernel 自上而下执行。
+- [x] 解释 Pass 与 Carry 的嵌套起终点字段和分析单位。
 - [ ] 解释 event、360 frame 和 visible_area 的差异。
-- [ ] 将可回答与不可直接回答的问题按证据阶梯分类。
+- [x] 将当前图表结果按证据阶梯分类。
+- [ ] 决定主结果展示全部 play pattern，还是单独展示 Regular Play。
