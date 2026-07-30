@@ -45,7 +45,13 @@ def test_sync_clones_then_updates_existing_repository(tmp_path: Path) -> None:
     assert (clone / "data" / "competitions.json").is_file()
     assert not (clone / "events").exists()
 
+    expected = '[{"competition_id": 1}]\n'
+    (source / "data" / "competitions.json").write_text(expected)
+    run("git", "add", "data/competitions.json", cwd=source)
+    run("git", "commit", "-m", "Update test data", cwd=source)
+
     subprocess.run([SCRIPT], check=True, env=environment, capture_output=True)
+    assert (clone / "data" / "competitions.json").read_text() == expected
     assert not list(data_root.glob(".open-data-clone.*"))
 
 

@@ -13,6 +13,7 @@ handoff correctness rather than complex runtime behavior.
 
 ```bash
 uv lock --check
+uv run ruff format --check .
 uv run ruff check .
 uv run pytest
 uv run python scripts/validate_course.py
@@ -31,13 +32,13 @@ git ls-files data
 
 ## Manual Checks
 
-- [ ] Public README states data attribution and evidence boundaries.
-- [ ] Syllabus progresses by football questions, not library features.
-- [ ] Agent instructions distinguish implementation from interpretation.
-- [ ] Core curriculum remains local-CPU compatible.
-- [ ] GitHub remote is public and initial commit is visible.
+- [x] Public README states data attribution and evidence boundaries.
+- [x] Syllabus progresses by football questions, not library features.
+- [x] Agent instructions distinguish implementation from interpretation.
+- [x] Core curriculum remains local-CPU compatible.
+- [x] GitHub remote is public and initial commit is visible.
 
 ## Known Gaps
 
 - A data-backed lesson notebook will be validated when the first lesson begins.
-- Cross-platform validation beyond the current macOS environment is deferred.
+- CI intentionally does not download the multi-gigabyte upstream event dataset.

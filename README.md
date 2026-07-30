@@ -44,9 +44,12 @@ uv run jupyter lab
 运行项目检查：
 
 ```bash
+uv lock --check
+uv run ruff format --check .
 uv run ruff check .
 uv run pytest
 uv run python scripts/validate_course.py
+uv run python scripts/validate_notebook.py course/templates/analysis.ipynb
 ```
 
 ## 数据约定

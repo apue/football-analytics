@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "A question-led football analytics learning project using public event data"
 readme = "README.md"
 requires-python = ">=3.12,<3.14"
+license = "MIT"
 dependencies = [
     "matplotlib>=3.10",
     "mplsoccer>=1.7",

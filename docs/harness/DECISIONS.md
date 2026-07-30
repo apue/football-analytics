@@ -32,3 +32,9 @@ and must declare its compute profile.
 
 Decision: define the full course map now, fully specify the opening stage, and
 elaborate later stages near the point of use.
+
+## D007: Pull Request CI
+
+Decision: run the locked Python 3.12 environment, formatting, lint, tests,
+course-state validation, and a clean-kernel notebook smoke test on pull
+requests and pushes to `main`. Upstream match data remains outside CI.

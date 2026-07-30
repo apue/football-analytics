@@ -70,9 +70,12 @@ metric result, football interpretation, or unverified hypothesis.
 Default repository checks:
 
 ```bash
+uv lock --check
+uv run ruff format --check .
 uv run ruff check .
 uv run pytest
 uv run python scripts/validate_course.py
+uv run python scripts/validate_notebook.py course/templates/analysis.ipynb
 ```
 
 For a changed notebook, also execute it from a clean kernel. Never claim a
