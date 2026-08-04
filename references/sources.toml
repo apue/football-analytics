@@ -1,0 +1,8 @@
+schema_version = 1
+
+[source.soccer_analytics_ml]
+name = "Soccer Analytics with Machine Learning companion repository"
+url = "https://github.com/SoccerAnalyticsML/Soccer-Analytics-with-Machine-Learning.git"
+commit = "b146ad11248ceee9a04d1212e172a6728b579a61"
+checkout = "soccer-analytics-ml"
+license_note = "Local reference only; review upstream terms before redistribution."

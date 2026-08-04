@@ -3,8 +3,10 @@ from pathlib import Path
 import pytest
 
 from football_analytics.paths import (
+    BOOK_REFERENCE_ENV,
     CATALOG_ENV,
     OPEN_DATA_ENV,
+    get_book_reference_root,
     get_catalog_path,
     get_open_data_root,
     get_project_root,
@@ -60,4 +62,23 @@ def test_catalog_path_uses_project_default(
 
     assert get_catalog_path(tmp_path) == (
         tmp_path / "data" / "processed" / "open_data_catalog.sqlite"
+    )
+
+
+def test_book_reference_root_uses_environment_override(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    expected = tmp_path / "book-repository"
+    monkeypatch.setenv(BOOK_REFERENCE_ENV, str(expected))
+
+    assert get_book_reference_root() == expected
+
+
+def test_book_reference_root_uses_project_default(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv(BOOK_REFERENCE_ENV, raising=False)
+
+    assert get_book_reference_root(tmp_path) == (
+        tmp_path / "references" / "external" / "soccer-analytics-ml"
     )
