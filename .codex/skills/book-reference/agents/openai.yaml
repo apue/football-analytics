@@ -1,0 +1,4 @@
+interface:
+  display_name: "Book Reference"
+  short_description: "Query the pinned Soccer Analytics ML companion repo"
+  default_prompt: "Use $book-reference to compare this lesson with the pinned book repository and cite the exact notebook cells."

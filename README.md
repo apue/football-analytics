@@ -83,6 +83,28 @@ uv run match-evidence --match-id 3773585 --format markdown
 证据包统一给出进攻三区进入、首次进入控球的后续结果、供应商标记的反击和进球
 事件链。它用于复用可审查的计算，不自动推断球队风格或战术原因。
 
+## 原书参考仓库
+
+课程对照 *Soccer Analytics with Machine Learning* 时使用固定 commit 的本地参考
+仓库。第一次使用显式初始化：
+
+```bash
+./scripts/sync_book_reference.sh
+```
+
+之后的查询完全走本地 `book-ref` 接口，不会隐式访问网络或跟随上游分支：
+
+```bash
+uv run book-ref status
+uv run book-ref search "kdeplot" --chapter 3
+uv run book-ref show \
+  extras/chapter-3/05-advanced-visualizations-mplsoccer.ipynb \
+  --cell 17
+```
+
+固定来源、版本更新规则和已确认章节入口见
+[`references/soccer-analytics-ml.md`](references/soccer-analytics-ml.md)。
+
 发布分析时应记录数据源 commit：
 
 ```bash

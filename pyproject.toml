@@ -8,6 +8,7 @@ license = "MIT"
 dependencies = []
 
 [project.scripts]
+book-ref = "football_analytics.book_reference_cli:main"
 catalog = "football_analytics.catalog_cli:main"
 match-evidence = "football_analytics.evidence_cli:main"
 

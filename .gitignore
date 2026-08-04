@@ -19,5 +19,9 @@ data/processed/*
 !data/external/.gitkeep
 !data/processed/.gitkeep
 
+# Independently cloned teaching references. Only manifests and indexes are tracked.
+references/external/*
+!references/external/.gitkeep
+
 # Generated report artifacts are opt-in for publication.
 reports/generated/

@@ -59,6 +59,14 @@ report catalog coverage, and confirm ambiguous or incomplete scopes before
 analysis. Do not bypass the catalog with ad hoc source parsing unless
 diagnosing the catalog itself.
 
+## Book Reference
+
+Use `$book-reference` whenever the learner asks to compare with *Soccer Analytics
+with Machine Learning*, its chapters, notebooks, code, or companion repository.
+Query the pinned local checkout through `book-ref`; do not browse or pull upstream
+when the local reference is ready. Report the source commit, relative path, and
+notebook cell or text line used for a material comparison.
+
 ## Turn Completion And Checkpoints
 
 Use `$course-turn-checkpoint` after any turn that modifies the repository. The
