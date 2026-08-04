@@ -1,10 +1,10 @@
 ---
 lesson_id: 00-02-event-table
-status: paused
-checkpoint_id: CP-001
-current_step: visualization lab 已完成并暂停，等待学习者审阅六组图表
-next_action: 学习者打开 visualization-lab.ipynb，逐图确认口径、可读性和解释边界
-updated_at: 2026-08-04T16:36:02+08:00
+status: completed
+checkpoint_id: CP-002
+current_step: 学习者已接受 00-02 在 visualization lab 边界完成
+next_action: 与学习者讨论下一波问题，再据新问题初始化后续课程单元
+updated_at: 2026-08-04T16:45:09+08:00
 ---
 
 # 课程交接
@@ -19,11 +19,13 @@ updated_at: 2026-08-04T16:36:02+08:00
 - 已加入按事件类型的 missing-data 检查，并确认本场用于这些图的必要字段完整。
 - 已逐张视觉检查传球距离、xG、累计射门、两类热图、passing network 和 Messi
   事件位置图，并修正标题、尺度、色条与累计图留白。
+- 已补齐 `findings.md`、`checks.md` 与 `exercises.md`，学习者接受本课完成。
 
 ## 当前工作
 
-- 本实验已经达到预定 review 边界；当前暂停等待学习者审阅。
-- 00-02 的核心事件类型表、比赛时间线和完整缺失报告尚未开始，不会在本检查点自动推进。
+- 00-02 已在协商后的 visualization lab 边界完成；事件类型概览、射门时间线与
+  本实验所需字段的缺失检查均包含在主 Notebook 中。
+- 不自动切换到 00-03；下一课题由学习者的新一轮问题决定。
 
 ## 决定
 
@@ -48,11 +50,13 @@ updated_at: 2026-08-04T16:36:02+08:00
 - `nbformat.validate`：schema 有效；23 cells、11 code cells、7 张存储图、0 个错误输出。
 - `git diff --check`：通过。
 - 已视觉检查 7 张图；最后的 hexbin 标题明确共享颜色尺度且不再遮挡球场。
-- 未运行 pytest 或 ruff：本检查点没有修改 `src/` 或 Python 模块，相关不确定性由
-  Notebook clean-kernel 执行和 schema/视觉检查覆盖。
+- `uv lock --check`：通过。
+- `uv run ruff format --check .` 与 `uv run ruff check .`：38 个文件通过。
+- `uv run pytest`：19 个测试通过。
+- 课程模板 Notebook 也从干净 kernel 执行成功。
 
 ## 开放问题
 
-- 学习者需要确认：成功 Regular Play 是否是所需传球距离口径、network 的 3 次边阈值
-  是否合适，以及 Messi 两面板是否比“移动热区”更符合想回答的问题。
-- 学习者确认后，再决定是调整本实验，还是继续 00-02 的事件类型表、时间线与缺失报告。
+- 多场样本、network 阈值敏感性和连续移动需要后续课程或不同数据源验证；它们不是
+  本课未完成的交付项。
+- 下一步先讨论新的足球问题，再决定是否按原顺序进入 00-03。

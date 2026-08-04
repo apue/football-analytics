@@ -1,6 +1,6 @@
 # 00-02 一场比赛如何成为事件表
 
-Status: active
+Status: completed
 
 ## 足球问题
 
@@ -58,11 +58,11 @@ Status: active
 
 ## 预期产物
 
-- `visualization-lab.ipynb`：六组图、显式筛选和数据质量断言。
-- `analysis.ipynb`：本课核心事件类型表、时间线与缺失检查，待学习者审阅本实验后再做。
-- `findings.md`：本课进入 review 时补充。
-- `checks.md`：本课进入 review 时补充。
-- `exercises.md`：本课进入 review 时补充。
+- `visualization-lab.ipynb`：六组图、事件类型概览、显式筛选和数据质量断言；
+  本轮经讨论后用它作为 00-02 的主 Notebook，不再另建 `analysis.ipynb`。
+- `findings.md`：结果、证据层级、敏感性与限制。
+- `checks.md`：数据、指标和可复现性检查。
+- `exercises.md`：定义敏感性与迁移练习。
 
 ## 验收标准
 
@@ -74,7 +74,7 @@ Status: active
 - [x] 两队 passing network 使用同一首次换人窗口和同一节点/边尺度。
 - [x] Messi 图明确是接球与记录到的持球行为位置，不声称表示连续移动。
 - [x] 每组输出说明问题、样本、算法、足球读法、不能证明什么和增强可信度的检查。
-- [ ] 学习者审阅图表口径与视觉结果，并决定是否进入 00-02 其余内容。
+- [x] 学习者审阅图表口径与视觉结果，并接受本课在当前边界完成。
 
 ## 分析前预测
 
