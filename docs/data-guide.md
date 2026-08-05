@@ -30,6 +30,60 @@ export STATSBOMB_OPEN_DATA=/absolute/path/to/open-data
 Python 代码通过 `football_analytics.get_open_data_root()` 取得路径，避免在
 Notebook 中散布机器相关的绝对路径。
 
+## 可复用的 events + 360 接口
+
+空间分析的加载、关联和质量检查位于 `football_analytics.spatial`。Notebook 不应
+自行重复解析 JSON。推荐的单场调用顺序是：
+
+```python
+from football_analytics import (
+    assert_spatial_quality,
+    build_360_event_rows,
+    build_spatial_quality_report,
+    load_match_spatial_data,
+)
+
+match = load_match_spatial_data(3773585)
+report = build_spatial_quality_report(match)
+assert_spatial_quality(report)
+rows = build_360_event_rows(match)
+```
+
+接口契约：
+
+- `load_match_spatial_data(match_id)` 返回该场全部 events 和全部可用 360 frames；
+  没有 360 的 event 不会被删除。
+- `build_spatial_quality_report(match)` 返回可展示的计数，不修改原始记录。
+- `assert_spatial_quality(report)` 阻止重复 ID、无法关联的 frame、畸形坐标等会令
+  表格不可靠的问题；它允许结构性缺少 360、actor 不可见，以及 freeze-frame
+  球员位于边线外。
+- `build_360_event_rows(match)` 按 `event.id == frame.event_uuid` 生成一行一个
+  360 frame 的场景表，并保留 `match_id` 与 `event_uuid`。
+- `summarize_shot_direction(events)` 按球队和半场检查射门起点。StatsBomb 已将
+  控球队表示为向 `x=120` 进攻，不要因换边再次翻转第二半场坐标。
+
+未来处理多场比赛时，仍然逐场执行同一接口，再拼接通过检查的场景行：
+
+```python
+import pandas as pd
+
+match_ids = [3773585, ...]
+tables = []
+reports = []
+
+for match_id in match_ids:
+    match = load_match_spatial_data(match_id)
+    report = build_spatial_quality_report(match)
+    assert_spatial_quality(report)
+    reports.append(report)
+    tables.append(pd.DataFrame(build_360_event_rows(match)))
+
+dataset = pd.concat(tables, ignore_index=True)
+```
+
+探索集与验证集应只更换 `match_ids`，不更改上述读取、关联和验证规则。具体压力、
+出球选择和后续结果的定义属于分析层，应由后续 lesson 单独固定。
+
 ## 同步与溯源
 
 首次克隆或后续更新：
