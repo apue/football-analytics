@@ -119,6 +119,8 @@ def _parser() -> argparse.ArgumentParser:
     report.add_argument("--rosters", type=Path, required=True)
     report.add_argument("--output", type=Path, required=True)
     report.add_argument("--primary-threshold", type=int, default=15)
+    report.add_argument("--appearances", type=Path)
+    report.add_argument("--competition-policy", type=Path)
     return parser
 
 
@@ -478,6 +480,8 @@ def _render_report(args: argparse.Namespace) -> int:
         args.rosters,
         args.output,
         primary_threshold=args.primary_threshold,
+        appearances_path=args.appearances,
+        competition_policy_path=args.competition_policy,
     )
     _emit({"report": str(args.output)})
     return 0

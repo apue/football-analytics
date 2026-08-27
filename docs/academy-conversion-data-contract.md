@@ -46,6 +46,13 @@ sums clubs within the same season and analytical tier, but never combines
 different tiers to cross a threshold. Competition eligibility and tier are
 versioned policy, not source facts.
 
+The JSON competition policy may also provide static `competition_metadata`
+with `country`, `domestic_level`, `name_zh`, and `career_eligible`. These fields
+support reader-facing league names and the professional-career view without
+changing raw appearance facts. The first version is intentionally static;
+future policies may add season validity fields when historical reclassification
+materially affects a result.
+
 `complete` coverage means all competitions in the declared scope were checked
 for that player-season, including verified zero appearances. `partial` means
 some scope was checked. `missing` means the required scope was not checked.

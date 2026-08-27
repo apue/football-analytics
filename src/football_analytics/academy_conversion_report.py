@@ -6,6 +6,7 @@ from __future__ import annotations
 import csv
 import json
 from collections import Counter, defaultdict
+from collections.abc import Mapping
 from pathlib import Path
 
 _TIER_LABELS = {
@@ -23,6 +24,8 @@ def render_report(
     output_path: Path,
     *,
     primary_threshold: int = 15,
+    appearances_path: Path | None = None,
+    competition_policy_path: Path | None = None,
 ) -> None:
     """Render one self-contained HTML report from validated analysis outputs."""
 
@@ -32,6 +35,9 @@ def render_report(
         outcomes = list(csv.DictReader(handle))
     if not rosters_path.is_file():
         raise ValueError(f"roster input not found: {rosters_path}")
+
+    competition_policy = _load_competition_policy(competition_policy_path)
+    appearances = _load_optional_csv(appearances_path)
 
     by_threshold: dict[int, list[dict[str, str]]] = defaultdict(list)
     for row in outcomes:
@@ -86,6 +92,13 @@ def render_report(
         }
         for tier, count in sorted(tier_counts.items(), key=lambda item: item[0])
     ]
+    level_matrix = _build_level_matrix(primary_rows)
+    player_rows = _add_representative_leagues(
+        primary_rows,
+        appearances,
+        competition_policy,
+        threshold=primary_threshold,
+    )
     report_data = {
         "analysisComplete": bool(summaries)
         and all(row["analysis_complete"].lower() == "true" for row in summaries),
@@ -101,12 +114,143 @@ def render_report(
         "overall": overall,
         "cohorts": cohort_rows,
         "tierBreakdown": tier_breakdown,
-        "players": primary_rows,
+        "levelMatrix": level_matrix,
+        "players": player_rows,
     }
     encoded = json.dumps(report_data, ensure_ascii=False, separators=(",", ":"))
     encoded = encoded.replace("<", "\\u003c")
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(_HTML.replace("__REPORT_DATA__", encoded))
+
+
+def _load_optional_csv(path: Path | None) -> list[dict[str, str]]:
+    if path is None:
+        return []
+    if not path.is_file():
+        raise ValueError(f"report input not found: {path}")
+    with path.open(newline="") as handle:
+        return list(csv.DictReader(handle))
+
+
+def _load_competition_policy(path: Path | None) -> dict[str, object]:
+    if path is None:
+        return {}
+    if not path.is_file():
+        raise ValueError(f"competition policy not found: {path}")
+    value = json.loads(path.read_text())
+    if not isinstance(value, dict):
+        raise ValueError("competition policy must be a JSON object")
+    return value
+
+
+def _build_level_matrix(rows: list[dict[str, str]]) -> list[dict[str, object]]:
+    definitions = (
+        (
+            "任一纳入的职业联赛",
+            "当前公开数据确认的职业立足下界",
+            {"T0", "T1-A", "T1-B", "T2"},
+        ),
+        (
+            "较高水平职业联赛",
+            "五大联赛及其他选定高水平联赛",
+            {"T0", "T1-A", "T1-B"},
+        ),
+        ("五大联赛", "英超、西甲、德甲、意甲、法甲", {"T0"}),
+    )
+    return [
+        {
+            "label": label,
+            "detail": detail,
+            "established": sum(row["established_tier"] in tiers for row in rows),
+            "sustained": sum(row["sustained_tier"] in tiers for row in rows),
+        }
+        for label, detail, tiers in definitions
+    ]
+
+
+def _add_representative_leagues(
+    outcomes: list[dict[str, str]],
+    appearances: list[dict[str, str]],
+    policy: Mapping[str, object],
+    *,
+    threshold: int,
+) -> list[dict[str, str]]:
+    tiers = policy.get("tiers", {})
+    ranks = policy.get("tier_ranks", {})
+    metadata = policy.get("competition_metadata", {})
+    if not isinstance(tiers, dict) or not isinstance(ranks, dict):
+        return [dict(row, representative_leagues="") for row in outcomes]
+    competition_tiers = {
+        competition_id: tier
+        for tier, competition_ids in tiers.items()
+        if isinstance(competition_ids, list)
+        for competition_id in competition_ids
+    }
+    competition_ranks = {
+        competition_id: int(ranks.get(tier, 99))
+        for competition_id, tier in competition_tiers.items()
+    }
+    names = (
+        {
+            competition_id: str(value.get("name_zh", competition_id))
+            for competition_id, value in metadata.items()
+            if isinstance(value, dict)
+        }
+        if isinstance(metadata, dict)
+        else {}
+    )
+
+    by_player_season_rank: Counter[tuple[str, int, int]] = Counter()
+    by_player_season_competition: Counter[tuple[str, int, str]] = Counter()
+    for row in appearances:
+        competition_id = row.get("competition_id", "")
+        rank = competition_ranks.get(competition_id)
+        if rank is None:
+            continue
+        player_id = row["player_id"]
+        season = int(row["season_start"])
+        count = int(row["appearances"])
+        by_player_season_rank[(player_id, season, rank)] += count
+        by_player_season_competition[(player_id, season, competition_id)] += count
+
+    result = []
+    for outcome in outcomes:
+        player_id = outcome["player_id"]
+        start = int(outcome["exit_season_start"]) + 1
+        end = start + 5
+        candidates: dict[str, tuple[int, int, int]] = {}
+        for (candidate_player, season, rank), count in by_player_season_rank.items():
+            if candidate_player != player_id or not (start <= season < end):
+                continue
+            if count < threshold:
+                continue
+            for (
+                comp_player,
+                comp_season,
+                competition_id,
+            ), apps in by_player_season_competition.items():
+                if comp_player != player_id or comp_season != season:
+                    continue
+                if competition_ranks.get(competition_id) != rank:
+                    continue
+                previous = candidates.get(competition_id, (rank, 0, 0))
+                candidates[competition_id] = (
+                    min(rank, previous[0]),
+                    max(apps, previous[1]),
+                    previous[2] + apps,
+                )
+        ordered = sorted(
+            candidates,
+            key=lambda competition_id: (
+                candidates[competition_id][0],
+                -candidates[competition_id][1],
+                -candidates[competition_id][2],
+                names.get(competition_id, competition_id),
+            ),
+        )[:2]
+        representative = "、".join(names.get(value, value) for value in ordered)
+        result.append(dict(outcome, representative_leagues=representative))
+    return result
 
 
 _HTML = r"""<!doctype html>
@@ -126,6 +270,7 @@ _HTML = r"""<!doctype html>
     .metric-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:18px}.metric{background:var(--surface);border:1px solid var(--line);padding:22px}.metric .num{font-family:Georgia,serif;font-size:42px;line-height:1}.metric b{display:block;font-size:14px;margin:8px 0 4px}.metric small,.small{font-size:12px;color:var(--muted)}
     .funnel{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;margin:30px 0}.funnel-step{padding:28px 22px;background:var(--navy);color:white;min-height:154px}.funnel-step:nth-child(2){background:#154b78}.funnel-step:nth-child(3){background:var(--wine)}.funnel-step .n{font-family:Georgia,serif;font-size:50px;line-height:1}.funnel-step b{display:block;margin:8px 0 2px}.funnel-step small{color:#dfe8ef}.evidence-warning{background:#fff4e0;border-left:5px solid var(--gold);padding:20px 22px;margin-top:16px;color:#604818}
     .chart-layout{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(260px,.65fr);gap:18px}.chart-card{background:var(--surface);border:1px solid var(--line);padding:28px}.chart-card h3{font-family:Georgia,"Noto Serif SC",serif;font-size:26px;margin:0 0 6px}.chart-card .sub{font-size:13px;color:var(--muted);margin-bottom:24px}.hbar{display:grid;grid-template-columns:minmax(150px,250px) 1fr 72px;gap:14px;align-items:center;margin:20px 0}.hbar-label b{display:block}.hbar-label small{color:var(--muted)}.track{height:25px;background:#e9e3d9;overflow:hidden}.fill{height:100%;background:var(--blue);min-width:2px}.fill.gold{background:var(--gold)}.fill.wine{background:var(--wine)}.bar-value{text-align:right;font-variant-numeric:tabular-nums}.bar-value b{display:block}.bar-value small{color:var(--muted)}
+    .level-group{padding:22px 0;border-top:1px solid var(--line)}.level-group:first-child{padding-top:0;border-top:0}.level-head{display:flex;justify-content:space-between;gap:18px;align-items:baseline}.level-head b{font-family:Georgia,"Noto Serif SC",serif;font-size:21px}.level-head small{color:var(--muted);text-align:right}.level-group .hbar{margin:12px 0}.level-group .hbar-label b{font-family:inherit;font-size:13px}
     .insight-list{display:grid;gap:1px;background:var(--line);border:1px solid var(--line)}.insight{background:var(--surface);padding:24px}.insight strong{font-family:Georgia,"Noto Serif SC",serif;font-size:22px;display:block;line-height:1.3;margin-bottom:8px}.insight p{margin:0;color:var(--muted);font-size:14px}
     .controls{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 22px}.controls button{border:1px solid var(--line);background:white;padding:9px 14px;cursor:pointer;border-radius:20px}.controls button.active{background:var(--navy);color:white;border-color:var(--navy)}.cohort-row{display:grid;grid-template-columns:68px 1fr 78px;gap:12px;align-items:center;margin:18px 0}.cohort-bars{display:grid;gap:4px}.cohort-track{height:13px;background:#e9e3d9}.cohort-fill{height:100%;background:var(--blue)}.cohort-fill.sustain{background:var(--gold)}.legend{display:flex;gap:18px;font-size:12px;color:var(--muted)}.dot{display:inline-block;width:10px;height:10px;margin-right:6px}
     .method-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.definition{padding:22px;border-top:3px solid var(--navy);background:var(--surface)}.definition b{display:block;margin-bottom:8px}.definition p{font-size:13px;color:var(--muted);margin:0}.boundary{margin-top:18px;padding:26px;background:var(--navy);color:white}.boundary h3{font-family:Georgia,"Noto Serif SC",serif;font-size:26px;margin:0 0 8px}.boundary p{color:#dbe5ef;margin:0}
@@ -146,8 +291,8 @@ _HTML = r"""<!doctype html>
     <div class="chapter-head"><div class="chapter-num">01 / 观点</div><div><h2>顶级青训同时生产顶级价值，也生产职业不确定性</h2><p class="chapter-intro">评价青训不能只数有多少人留在本队，也不能把一次成年队出场叫作成功。真正值得观察的是：球员走到了多高、是否站稳，以及这种位置能否被重复获得。</p></div></div>
     <div class="metric-grid">
       <div class="metric"><div class="num"><span id="top-established">—</span><small> / 85</small></div><b>在五大联赛单季站稳</b><small>顶级竞技产出的保守下界</small></div>
-      <div class="metric"><div class="num"><span id="established">—</span><small> / 85</small></div><b>在纳入联赛单季站稳</b><small>一个赛季至少 <span class="primary-n">—</span> 场</small></div>
-      <div class="metric"><div class="num"><span id="sustained">—</span><small> / 85</small></div><b>在至少两个赛季站稳</b><small>职业位置能够被重复赢得</small></div>
+      <div class="metric"><div class="num"><span id="established">—</span><small> / 85</small></div><b>已确认在职业联赛单季立足</b><small>一个赛季至少 <span class="primary-n">—</span> 场</small></div>
+      <div class="metric"><div class="num"><span id="sustained">—</span><small> / 85</small></div><b>已确认持续立足职业联赛</b><small>至少两个赛季达到同一门槛</small></div>
     </div>
     <div class="evidence-warning">三项结果都是现有公开数据至少能够确认的人数，而不是完整成材率。数据缺失只影响估计的完整性，不改变已经观察到的正例。</div>
   </section>
@@ -164,11 +309,11 @@ _HTML = r"""<!doctype html>
     </div>
   </section>
 
-  <section class="chapter" id="pressure">
-    <div class="chapter-head"><div class="chapter-num">03 / 代价</div><div><h2>进入成年队、站稳一个赛季、形成持续生涯，是三件不同的事</h2><p class="chapter-intro">在现有记录中，35人获得过纳入联赛的出场，25人至少一个赛季达到15场，14人能在两个赛季重复做到。青年队履历不会自动兑换成稳定的成年位置。</p></div></div>
+  <section class="chapter" id="career">
+    <div class="chapter-head"><div class="chapter-num">03 / 出路</div><div><h2>对家庭，真正的问题不只是能否成为明星，而是能否留在职业足球</h2><p class="chapter-intro">“达到多高”和“能否持续”是两个维度。我们把联赛水平分成职业联赛、较高水平职业联赛和五大联赛，再分别观察球员是否至少一个赛季、或至少两个赛季达到15场。</p></div></div>
     <div class="chart-layout">
-      <article class="chart-card"><h3>阈值敏感性</h3><div class="sub">切换“站稳”的场次要求，比较单赛季与多赛季下界。</div><div class="controls" id="thresholds"></div><div id="threshold-bars"></div></article>
-      <article class="chart-card"><h3>三层职业转换</h3><div class="sub">主口径 N=<span class="primary-n">—</span>；数字都是现有数据至少确认的人数。</div><div id="ladder"></div><div class="evidence-warning"><b>这不是淘汰漏斗。</b> 未确认者可能在缺失联赛中完成了职业转换，因此只能陈述“至少有多少人做到”。</div></article>
+      <article class="chart-card"><h3>联赛水平 × 职业持续性</h3><div class="sub">浅蓝为单季立足，金色为至少两个赛季立足；所有比例均以85名球员为分母。</div><div id="level-matrix"></div></article>
+      <article class="chart-card"><h3>结论会随门槛改变多少？</h3><div class="sub">切换单赛季出场要求，比较单季与多年立足的保守下界。</div><div class="controls" id="thresholds"></div><div id="threshold-bars"></div><div class="evidence-warning"><b>职业联赛宽度尚未完整覆盖。</b> 当前来源主要包含各国顶级联赛，缺少英冠、意丙等职业次级联赛。因此第一行是已确认下界，不能当作完整职业立足率。</div></article>
     </div>
   </section>
 
@@ -183,9 +328,9 @@ _HTML = r"""<!doctype html>
   </section>
 
   <section class="chapter" id="players">
-    <div class="chapter-head"><div class="chapter-num">05 / 附录</div><div><h2>85名球员，85条不同的职业路径</h2><p class="chapter-intro">总体数字不应该抹掉个体差异。这里可以查看每名球员在五年窗口内被观察到的最高层级、单赛季稳定性和多赛季持续性。</p></div></div>
+    <div class="chapter-head"><div class="chapter-num">05 / 球员</div><div><h2>抽象层级最终要落回真实的职业路径</h2><p class="chapter-intro">每名球员最多展示两个在达标赛季中具有代表性的真实联赛，优先显示竞技级别更高、出场更多的联赛。没有列出联赛不等于没有职业生涯，也可能只是当前数据尚未覆盖。</p></div></div>
     <div class="table-tools"><input id="player-search" type="search" placeholder="搜索球员姓名" aria-label="搜索球员姓名"><select id="status-filter" aria-label="筛选结果"><option value="all">全部结果</option><option value="reached">已确认站稳</option><option value="unknown">尚无法判断</option></select></div>
-    <div class="table-wrap" role="region" tabindex="0" aria-label="可横向滚动的球员职业结果表"><table><thead><tr><th>球员</th><th>离开年届</th><th>最高观察层级</th><th>单赛季站稳</th><th>多赛季站稳</th><th>证据状态</th></tr></thead><tbody id="player-rows"></tbody></table></div>
+    <div class="table-wrap" role="region" tabindex="0" aria-label="可横向滚动的球员职业结果表"><table><thead><tr><th>球员</th><th>离开年届</th><th>五年内站稳的代表联赛</th><th>单季立足</th><th>多年立足</th><th>数据状态</th></tr></thead><tbody id="player-rows"></tbody></table></div>
   </section>
 
   <section class="closing"><h2>顶级青训的两面，并不互相矛盾。</h2><p>正因为极少数球员能够走到职业足球的最高处，青训拥有巨大的竞技价值；也正因为这样的高度稀缺，即使对最高青年梯队的球员而言，稳定职业生涯仍然不是体系自动交付的结果。</p></section>
@@ -197,8 +342,9 @@ document.querySelectorAll('.exit-total').forEach(x=>x.textContent=D.exitPlayers)
 const topTier=D.tierBreakdown.find(x=>x.tier==='T0')||{count:0,shareOfConfirmed:0};$('#top-established').textContent=topTier.count;$('#elite-share').textContent=pct(topTier.shareOfConfirmed);$('#durability-share').textContent=pct(D.establishedCount?D.sustainedCount/D.establishedCount:0);
 const makeBar=(label,detail,count,total,color='')=>`<div class="hbar"><div class="hbar-label"><b>${esc(label)}</b><small>${esc(detail)}</small></div><div class="track"><div class="fill ${color}" style="width:${100*count/total}%"></div></div><div class="bar-value"><b>${count}/${total}</b><small>${pct(count/total)}</small></div></div>`;
 $('#tier-bars').innerHTML=D.tierBreakdown.map((r,i)=>makeBar(r.label,`最高达标层级 · 已确认者中 ${pct(r.shareOfConfirmed)}`,r.count,D.exitPlayers,i?'gold':'')).join('');
+$('#level-matrix').innerHTML=D.levelMatrix.map(r=>`<div class="level-group"><div class="level-head"><b>${esc(r.label)}</b><small>${esc(r.detail)}</small></div>${makeBar('单季立足',`至少一个赛季达到 ${D.primaryThreshold} 场`,r.established,D.exitPlayers)}${makeBar('多年立足',`至少两个赛季达到 ${D.primaryThreshold} 场`,r.sustained,D.exitPlayers,'gold')}</div>`).join('');
 const controls=$('#thresholds');let active=D.primaryThreshold;function renderThreshold(){controls.innerHTML=D.overall.map(r=>`<button class="${r.threshold===active?'active':''}" data-n="${r.threshold}">≥ ${r.threshold} 场</button>`).join('');controls.querySelectorAll('button').forEach(b=>b.onclick=()=>{active=+b.dataset.n;renderThreshold()});const row=D.overall.find(r=>r.threshold===active);$('#threshold-bars').innerHTML=makeBar('单赛季站稳','至少一个赛季达到阈值',row.established,row.total)+makeBar('多赛季站稳','至少两个赛季达到阈值',row.sustained,row.total,'gold')}
-renderThreshold();$('#ladder').innerHTML=makeBar('获得机会','至少一次选定联赛出场',D.observedReached,D.exitPlayers)+makeBar('单赛季站稳',`一个赛季至少 ${D.primaryThreshold} 场`,D.establishedCount,D.exitPlayers,'gold')+makeBar('多赛季站稳',`至少两个赛季达到 ${D.primaryThreshold} 场`,D.sustainedCount,D.exitPlayers,'wine');
-function renderPlayers(){const query=$('#player-search').value.trim().toLocaleLowerCase();const status=$('#status-filter').value;const rows=D.players.filter(r=>(!query||r.player_name.toLocaleLowerCase().includes(query))&&(status==='all'||r.status===status));$('#player-rows').innerHTML=rows.map(r=>`<tr><td><b>${esc(r.player_name)}</b></td><td>${r.exit_season_start}</td><td>${esc(tierLabel(r.highest_reached_tier))}</td><td>${esc(tierLabel(r.established_tier))}</td><td>${esc(tierLabel(r.sustained_tier))}</td><td><span class="tag ${r.status==='unknown'?'unknown':''}">${r.status==='reached'?'已确认站稳':'尚无法判断'}</span></td></tr>`).join('')}
+renderThreshold();
+function renderPlayers(){const query=$('#player-search').value.trim().toLocaleLowerCase();const status=$('#status-filter').value;const rows=D.players.filter(r=>(!query||r.player_name.toLocaleLowerCase().includes(query))&&(status==='all'||r.status===status));$('#player-rows').innerHTML=rows.map(r=>`<tr><td><b>${esc(r.player_name)}</b></td><td>${r.exit_season_start}</td><td>${esc(r.representative_leagues||'尚无已确认达标联赛')}</td><td><span class="tag ${r.status==='unknown'?'unknown':''}">${r.status==='reached'?'已确认':'尚无法判断'}</span></td><td><span class="tag ${r.sustained_status==='reached'?'':'unknown'}">${r.sustained_status==='reached'?'已确认':'尚无法判断'}</span></td><td>${r.coverage_complete==='True'?'覆盖完整':'覆盖不完整'}</td></tr>`).join('')}
 $('#player-search').addEventListener('input',renderPlayers);$('#status-filter').addEventListener('change',renderPlayers);renderPlayers();})();
 </script></body></html>"""

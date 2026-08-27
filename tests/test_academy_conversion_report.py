@@ -1,4 +1,5 @@
 import csv
+import json
 
 from football_analytics.academy_conversion_report import render_report
 
@@ -14,6 +15,8 @@ def test_report_labels_partial_results_as_lower_bounds(tmp_path):
     summaries = tmp_path / "summary.csv"
     outcomes = tmp_path / "outcomes.csv"
     rosters = tmp_path / "rosters.csv"
+    appearances = tmp_path / "appearances.csv"
+    policy = tmp_path / "policy.json"
     output = tmp_path / "index.html"
     _write_csv(
         summaries,
@@ -115,15 +118,56 @@ def test_report_labels_partial_results_as_lower_bounds(tmp_path):
             },
         ],
     )
+    _write_csv(
+        appearances,
+        [
+            "player_id",
+            "season_start",
+            "club_id",
+            "competition_id",
+            "appearances",
+            "source_url",
+        ],
+        [
+            {
+                "player_id": "p1",
+                "season_start": 2020,
+                "club_id": "c1",
+                "competition_id": "ES1",
+                "appearances": 18,
+                "source_url": "adult-source",
+            }
+        ],
+    )
+    policy.write_text(
+        json.dumps(
+            {
+                "tiers": {"T0": ["ES1"]},
+                "tier_ranks": {"T0": 0},
+                "competition_metadata": {"ES1": {"name_zh": "西甲"}},
+            }
+        )
+    )
 
-    render_report(summaries, outcomes, rosters, output)
+    render_report(
+        summaries,
+        outcomes,
+        rosters,
+        output,
+        appearances_path=appearances,
+        competition_policy_path=policy,
+    )
 
     html = output.read_text()
     assert "顶级青训的两面" in html
     assert "顶级青训同时生产顶级价值，也生产职业不确定性" in html
     assert "五大联赛顶级联赛" in html
-    assert "这不是淘汰漏斗" in html
+    assert "联赛水平 × 职业持续性" in html
+    assert "职业联赛宽度尚未完整覆盖" in html
     assert "对球员与家庭：入选不是承诺" in html
+    assert "五年内站稳的代表联赛" in html
+    assert '"representative_leagues":"西甲"' in html
+    assert '"levelMatrix"' in html
     assert "7 份官方年报中的 roster-season 行" not in html
     assert "底层仍保留可复现" not in html
     assert '"rosterReports"' not in html

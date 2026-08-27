@@ -54,6 +54,8 @@ uv run academy-conversion render-report \
   --summary <analysis-output>/cohort_summary.csv \
   --outcomes <analysis-output>/player_threshold_outcomes.csv \
   --rosters <roster-memberships.csv> \
+  --appearances <facts>/appearances.csv \
+  --competition-policy config/academy_conversion/competition_policy_prototype_v1.json \
   --output <run>/report/index.html \
   --primary-threshold 15
 ```
@@ -77,11 +79,22 @@ is the 85 target exit-cohort players. Boundary-detection rosters, roster-season
 row counts, report counts, and the larger identity universe are audit metadata,
 not reader-facing findings, and stay out of the narrative.
 
-Reader-facing copy uses football meanings such as “五大联赛顶级联赛” and
+Reader-facing copy uses football meanings such as “五大联赛”“职业联赛立足”和
 “多赛季站稳”. Internal tier codes remain available in the embedded audit data
-but are not required background knowledge. The report distinguishes academy
+but are not required background knowledge. The main career chart crosses
+competition level with one-season and multi-season durability rather than
+mixing both dimensions into one funnel. The player table shows at most two real
+competition names from qualifying seasons; names and country-level metadata
+come from the versioned competition policy. The report distinguishes academy
 production from Barcelona's own value capture: first-team minutes, transfer
 revenue, first breakthrough club, and current club require separate datasets.
+
+The static policy may mark a competition as career-eligible without modeling
+historical status changes. Add validity fields only when a concrete season
+change affects the observed sample. The current prototype source mainly covers
+top divisions, so its “professional league” result remains a lower bound and
+must not be described as complete coverage of leagues such as the Championship
+or Serie C.
 
 ## Barcelona v1 audit snapshot
 
