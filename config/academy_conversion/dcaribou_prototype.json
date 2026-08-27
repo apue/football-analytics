@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "provider": "http-file",
+  "source_policy": {
+    "status": "approved",
+    "use": "local-technical-prototype-only",
+    "reviewed_at": "2026-08-27",
+    "record": "docs/sources/academy-conversion.md",
+    "coverage_status": "partial",
+    "redistribute_raw": false
+  },
+  "contracts": {
+    "dataset_file": {
+      "magic_prefix_hex": "1f8b",
+      "min_bytes": 1000
+    }
+  },
+  "pages": [
+    {
+      "page_type": "dataset_file",
+      "dataset_table": "players",
+      "url": "https://pub-e682421888d945d684bcae8890b0ec20.r2.dev/data/players.csv.gz"
+    },
+    {
+      "page_type": "dataset_file",
+      "dataset_table": "appearances",
+      "url": "https://pub-e682421888d945d684bcae8890b0ec20.r2.dev/data/appearances.csv.gz"
+    },
+    {
+      "page_type": "dataset_file",
+      "dataset_table": "games",
+      "url": "https://pub-e682421888d945d684bcae8890b0ec20.r2.dev/data/games.csv.gz"
+    },
+    {
+      "page_type": "dataset_file",
+      "dataset_table": "competitions",
+      "url": "https://pub-e682421888d945d684bcae8890b0ec20.r2.dev/data/competitions.csv.gz"
+    }
+  ]
+}
