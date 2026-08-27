@@ -62,6 +62,22 @@ Every analysis run also emits `provenance.json`, containing the four input
 artifact paths, roster/appearance/coverage source URLs, and competition-policy
 versions used for the derived outcomes.
 
+## Editorial report contract
+
+The public-facing report frames academy output through two simultaneous lenses:
+
+- **production value:** confirmed senior opportunities, stable seasons,
+  multi-season durability, and the highest competitive level reached;
+- **career risk:** reaching the final youth squad does not guarantee a stable
+  senior role, while incomplete evidence must remain unknown rather than being
+  described as failure.
+
+Reader-facing copy uses football meanings such as “五大联赛顶级联赛” and
+“多赛季站稳”. Internal tier codes remain available in the embedded audit data
+but are not required background knowledge. The report distinguishes academy
+production from Barcelona's own value capture: first-team minutes, transfer
+revenue, first breakthrough club, and current club require separate datasets.
+
 ## Barcelona v1 audit snapshot
 
 On 2026-08-27, seven official annual reports produced 163 visually reviewed

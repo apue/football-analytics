@@ -119,10 +119,16 @@ def test_report_labels_partial_results_as_lower_bounds(tmp_path):
     render_report(summaries, outcomes, rosters, output)
 
     html = output.read_text()
-    assert "覆盖受限的探索性下界" in html
+    assert "青训产出的价值与代价" in html
+    assert "同一套青训体系，两种真实" in html
+    assert "五大联赛顶级联赛" in html
+    assert "这不是淘汰漏斗" in html
     assert "完整覆盖球员" in html
     assert '"analysisComplete":false' in html
     assert '"primaryThreshold":15' in html
+    assert '"observedReached":1' in html
+    assert '"establishedCount":1' in html
+    assert '"unknownCount":1' in html
     assert "One" in html
 
     summaries_10 = tmp_path / "summary-10.csv"
