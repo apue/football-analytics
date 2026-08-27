@@ -30,8 +30,8 @@ def render_report(
         summaries = list(csv.DictReader(handle))
     with outcomes_path.open(newline="") as handle:
         outcomes = list(csv.DictReader(handle))
-    with rosters_path.open(newline="") as handle:
-        rosters = list(csv.DictReader(handle))
+    if not rosters_path.is_file():
+        raise ValueError(f"roster input not found: {rosters_path}")
 
     by_threshold: dict[int, list[dict[str, str]]] = defaultdict(list)
     for row in outcomes:
@@ -90,9 +90,6 @@ def render_report(
         "analysisComplete": bool(summaries)
         and all(row["analysis_complete"].lower() == "true" for row in summaries),
         "primaryThreshold": primary_threshold,
-        "rosterListings": len(rosters),
-        "rosterReports": len({row["source_url"] for row in rosters}),
-        "uniqueRosterPlayers": len({row["player_id"] for row in rosters}),
         "exitPlayers": len(primary_rows),
         "observedReached": len(reached_rows),
         "establishedCount": len(established_rows),
@@ -141,35 +138,22 @@ _HTML = r"""<!doctype html>
 <body><main class="shell">
   <header class="mast"><b>La Masia / Academy Output Study</b><span>2015–2020 exit cohorts · five-year window</span></header>
   <section class="hero">
-    <div><div class="eyebrow">青训产出的价值与代价</div><h1>拉玛西亚<span>之后</span></h1><p class="dek">抵达最高青年梯队，不是职业生涯的终点，而是另一轮筛选的起点。我们追踪五届 Juvenil A 离队球员，观察一座顶级青训学院如何向成年足球输出人才，也观察稳定职业生涯为何从来不是默认结果。</p></div>
-    <aside class="hero-note">青训不是一条通往一线队的直线。它更像一个高方差的人才组合：少数人兑现顶级价值，更多人在不同联赛寻找职业位置。<small>本报告描述离开最高青年梯队之后的五年；不代表进入拉玛西亚的儿童最终成为职业球员的概率。</small></aside>
+    <div><div class="eyebrow">以拉玛西亚五届最高青年队为例</div><h1>顶级青训的<span>两面</span></h1><p class="dek">它的价值，来自能把少数人送到职业足球的最高处；它的残酷，在于即使已经抵达最高青年梯队，成年比赛的位置仍要从零开始、反复赢得。</p></div>
+    <aside class="hero-note">青训不是通往一线队的流水线，而是一项高上限、低确定性的人才投资。<small>证据来自85名在2015–16至2019–20赛季最后一次进入巴萨 Juvenil A 名单的球员，以及他们随后五个完整赛季的成年联赛记录。</small></aside>
   </section>
 
   <section class="chapter" id="summary">
-    <div class="chapter-head"><div class="chapter-num">01 / 双面</div><div><h2>同一套青训体系，两种真实</h2><p class="chapter-intro">对俱乐部，它持续生产可以在高水平职业足球立足的人才；对球员，即使已经通过此前所有筛选，成年比赛的稳定位置依然稀缺。</p></div></div>
-    <div class="dual">
-      <article class="panel value"><div class="panel-label">价值面 · 已观察到的产出</div><div class="big-number"><span id="established">—</span><small> / <span class="exit-total">—</span></small></div><h3>至少一个赛季站稳职业联赛</h3><p>相当于全体分母至少 <b id="established-rate">—</b>；其中 <b id="top-established">—</b> 人在五大联赛顶级联赛达到单季阈值。这里衡量的是人才产出，不等同于巴萨自身捕获了多少一线队或转会价值。</p></article>
-      <article class="panel risk"><div class="panel-label">风险面 · 不确定性仍然巨大</div><div class="big-number"><span id="unknown">—</span><small> 人</small></div><h3>目前仍无法判定是否达到阈值</h3><p>公开派生数据覆盖不完整，因此他们是“未知”，不是“失败”。真正严谨的残酷性，不应通过把缺失记录算作淘汰来制造。</p></article>
-    </div>
+    <div class="chapter-head"><div class="chapter-num">01 / 观点</div><div><h2>顶级青训同时生产顶级价值，也生产职业不确定性</h2><p class="chapter-intro">评价青训不能只数有多少人留在本队，也不能把一次成年队出场叫作成功。真正值得观察的是：球员走到了多高、是否站稳，以及这种位置能否被重复获得。</p></div></div>
     <div class="metric-grid">
-      <div class="metric"><div class="num" id="reached">—</div><b>至少获得过选定联赛机会</b><small>在观察窗口内至少出现过一次</small></div>
-      <div class="metric"><div class="num" id="sustained">—</div><b>多赛季站稳</b><small>至少两个赛季达到 <span class="primary-n">—</span> 场，不要求连续</small></div>
-      <div class="metric"><div class="num" id="complete">—</div><b>完整覆盖球员</b><small>当前只能报告已确认正例与保守下界</small></div>
+      <div class="metric"><div class="num"><span id="top-established">—</span><small> / 85</small></div><b>在五大联赛单季站稳</b><small>顶级竞技产出的保守下界</small></div>
+      <div class="metric"><div class="num"><span id="established">—</span><small> / 85</small></div><b>在纳入联赛单季站稳</b><small>一个赛季至少 <span class="primary-n">—</span> 场</small></div>
+      <div class="metric"><div class="num"><span id="sustained">—</span><small> / 85</small></div><b>在至少两个赛季站稳</b><small>职业位置能够被重复赢得</small></div>
     </div>
-  </section>
-
-  <section class="chapter" id="population">
-    <div class="chapter-head"><div class="chapter-num">02 / 分母</div><div><h2>研究从最后一道青年门槛开始</h2><p class="chapter-intro">这不是所有进入拉玛西亚的孩子，而是已经出现在官方 Juvenil A 名单中的球员。换句话说，我们研究的是精英青年球员进入成年足球后的再次分流。</p></div></div>
-    <div class="funnel">
-      <div class="funnel-step"><div class="n" id="listings">—</div><b>名单记录</b><small><span id="report-count">—</span> 份官方年报中的 roster-season 行</small></div>
-      <div class="funnel-step"><div class="n" id="unique">—</div><b>唯一球员</b><small>跨赛季身份去重之后</small></div>
-      <div class="funnel-step"><div class="n exit-total">—</div><b>目标 exit cohort</b><small>最终 Juvenil A 名单季为 2015–16 至 2019–20</small></div>
-    </div>
-    <div class="evidence-warning"><b>不能从这里推断整个青训体系的淘汰率。</b> 更年轻梯队的数据不可得，所以报告只能说明：即便已经抵达最高青年队，职业转换仍需要继续赢得比赛机会。</div>
+    <div class="evidence-warning">三项结果都是现有公开数据至少能够确认的人数，而不是完整成材率。数据缺失只影响估计的完整性，不改变已经观察到的正例。</div>
   </section>
 
   <section class="chapter" id="value">
-    <div class="chapter-head"><div class="chapter-num">03 / 产出</div><div><h2>价值不只属于留在巴萨的人</h2><p class="chapter-intro">一名球员在其他俱乐部成为高水平职业球员，可能是巴萨内部未捕获的价值，却仍然是青训体系对足球生态的真实输出。</p></div></div>
+    <div class="chapter-head"><div class="chapter-num">02 / 价值</div><div><h2>青训价值首先体现在球员能走到多高，而不只是谁留了下来</h2><p class="chapter-intro">一名球员在其他俱乐部成为高水平职业球员，可能是巴萨未能内部捕获的价值，却仍然证明了青训能够向职业足球输出什么级别的人才。</p></div></div>
     <div class="chart-layout">
       <article class="chart-card"><h3>已确认站稳者的竞技层级</h3><div class="sub">以全部研究对象为分母的保守下界；分类互斥，按最高达标层级计。</div><div id="tier-bars"></div></article>
       <aside class="insight-list">
@@ -181,46 +165,40 @@ _HTML = r"""<!doctype html>
   </section>
 
   <section class="chapter" id="pressure">
-    <div class="chapter-head"><div class="chapter-num">04 / 筛选</div><div><h2>获得机会、站稳、持续，是三道不同门槛</h2><p class="chapter-intro">单次出场并不等于职业位置；一个达标赛季也不等于长期生涯。报告用逐渐收紧的定义观察成年足球如何继续筛选已经非常优秀的青年球员。</p></div></div>
+    <div class="chapter-head"><div class="chapter-num">03 / 代价</div><div><h2>进入成年队、站稳一个赛季、形成持续生涯，是三件不同的事</h2><p class="chapter-intro">在现有记录中，35人获得过纳入联赛的出场，25人至少一个赛季达到15场，14人能在两个赛季重复做到。青年队履历不会自动兑换成稳定的成年位置。</p></div></div>
     <div class="chart-layout">
       <article class="chart-card"><h3>阈值敏感性</h3><div class="sub">切换“站稳”的场次要求，比较单赛季与多赛季下界。</div><div class="controls" id="thresholds"></div><div id="threshold-bars"></div></article>
       <article class="chart-card"><h3>三层职业转换</h3><div class="sub">主口径 N=<span class="primary-n">—</span>；数字都是现有数据至少确认的人数。</div><div id="ladder"></div><div class="evidence-warning"><b>这不是淘汰漏斗。</b> 未确认者可能在缺失联赛中完成了职业转换，因此只能陈述“至少有多少人做到”。</div></article>
     </div>
   </section>
 
-  <section class="chapter" id="cohorts">
-    <div class="chapter-head"><div class="chapter-num">05 / 年届</div><div><h2>不同年届看起来不同，但还不是趋势</h2><p class="chapter-intro">2017与2019届目前观察到的正例更多。不过每届仅12至21人，且成人数据覆盖不均；这些差异适合作为进一步核查线索，不应解释成培养质量的年度排名。</p></div></div>
-    <article class="chart-card"><div class="legend"><span><i class="dot" style="background:var(--blue)"></i>单赛季站稳</span><span><i class="dot" style="background:var(--gold)"></i>多赛季站稳</span></div><div id="cohort-chart"></div></article>
-  </section>
-
   <section class="chapter" id="definitions">
-    <div class="chapter-head"><div class="chapter-num">06 / 口径</div><div><h2>把专业术语翻译成足球语言</h2><p class="chapter-intro">底层仍保留可复现的分级与阈值，但正文只使用读者能够直接理解的职业含义。</p></div></div>
+    <div class="chapter-head"><div class="chapter-num">04 / 含义</div><div><h2>这组数据改变了我们如何理解“青训成功”</h2><p class="chapter-intro">同一批球员，对俱乐部、从业者和家庭意味着不同的价值与风险。一个单一的“成材率”无法容纳这些差异。</p></div></div>
     <div class="method-grid">
-      <div class="definition"><b>获得职业机会</b><p>五年观察窗口内，至少在纳入范围的成年国内联赛出场一次。</p></div>
-      <div class="definition"><b>单赛季站稳</b><p>同一赛季、同一竞技层级累计至少 <span class="primary-n">—</span> 场；不同层级不会相加。</p></div>
-      <div class="definition"><b>多赛季站稳</b><p>至少两个赛季达到阈值，不要求连续，用于区别短暂机会与重复获得角色。</p></div>
+      <div class="definition"><b>对俱乐部：产出不等于捕获</b><p>球员在外部成为高水平职业球员仍是青训产出；一线队分钟与转会收入则衡量俱乐部最终留住了多少价值。</p></div>
+      <div class="definition"><b>对球员与家庭：入选不是承诺</b><p>最高青年队代表已经非常接近职业足球，却不保证成年队角色。机会、站稳和持续需要分别赢得。</p></div>
+      <div class="definition"><b>对从业者：评估一个人才组合</b><p>既看顶级球员的高度，也看稳定职业球员的宽度和持续性，而不是用一名明星或一个比例概括整个年届。</p></div>
     </div>
-    <div class="boundary"><h3>这份报告能回答什么，不能回答什么</h3><p>它描述最高青年梯队之后的五年职业转换，不能识别拉玛西亚的因果培养效果，也不能解释伤病、教育或个人选择。当前版本还不能可靠衡量巴萨一线队捕获率、转会经济价值、首次突破球队和今天所在俱乐部；这些都需要独立、带时间戳的数据层。</p></div>
+    <div class="boundary"><h3>研究边界</h3><p>样本是85名最后一次进入 Juvenil A 名单的赛季位于2015–16至2019–20的球员，并观察其后五个完整赛季。更晚名单只用于避免把继续留队者误判为离队，不属于研究样本。结果不能代表所有进入拉玛西亚的儿童，也不能识别培养的因果效果。</p></div>
   </section>
 
   <section class="chapter" id="players">
-    <div class="chapter-head"><div class="chapter-num">07 / 球员</div><div><h2>从总体结论回到每一条职业路径</h2><p class="chapter-intro">表格保留球员级审计能力。层级名称已经翻译；“尚无法判断”继续与明确达标结果分开。</p></div></div>
+    <div class="chapter-head"><div class="chapter-num">05 / 附录</div><div><h2>85名球员，85条不同的职业路径</h2><p class="chapter-intro">总体数字不应该抹掉个体差异。这里可以查看每名球员在五年窗口内被观察到的最高层级、单赛季稳定性和多赛季持续性。</p></div></div>
     <div class="table-tools"><input id="player-search" type="search" placeholder="搜索球员姓名" aria-label="搜索球员姓名"><select id="status-filter" aria-label="筛选结果"><option value="all">全部结果</option><option value="reached">已确认站稳</option><option value="unknown">尚无法判断</option></select></div>
     <div class="table-wrap" role="region" tabindex="0" aria-label="可横向滚动的球员职业结果表"><table><thead><tr><th>球员</th><th>离开年届</th><th>最高观察层级</th><th>单赛季站稳</th><th>多赛季站稳</th><th>证据状态</th></tr></thead><tbody id="player-rows"></tbody></table></div>
   </section>
 
-  <section class="closing"><h2>青训的价值，不能只用“留下几个人”衡量。</h2><p>它既生产少数可以兑现顶级竞技价值的球员，也把更多人才输送到更广泛的职业足球体系。与此同时，对已经抵达最高青年梯队的球员而言，稳定的成年职业生涯仍然需要在新的环境里被反复赢得。</p></section>
+  <section class="closing"><h2>顶级青训的两面，并不互相矛盾。</h2><p>正因为极少数球员能够走到职业足球的最高处，青训拥有巨大的竞技价值；也正因为这样的高度稀缺，即使对最高青年梯队的球员而言，稳定职业生涯仍然不是体系自动交付的结果。</p></section>
   <p class="foot">数据范围：<a href="https://www.fcbarcelona.com/en/club/organisation-and-strategic-plan/commissions-and-bodies/annual-reports">FC Barcelona 官方年报</a> Juvenil A 名单；最终名单季 2015–16 至 2019–20；随后五个完整赛季。成人履历来自覆盖受限的 <a href="https://github.com/dcaribou/transfermarkt-datasets">公开派生赛事包</a>，当前所有球员均为 partial 或 missing coverage。页面只报告已观察正例与全体分母下界，不把缺失值转换为失败。研究类型：描述性青训产出分析，不作因果归因。</p>
 </main>
 <script>(()=>{const D=__REPORT_DATA__;
 const $=s=>document.querySelector(s);const pct=x=>`${(100*x).toFixed(1)}%`;const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const tierLabel=t=>({T0:'五大联赛顶级联赛','T1-A':'其他选定欧洲职业联赛','T1-B':'日韩顶级联赛',T2:'其他选定顶级职业联赛'}[t]||t||'—');
-document.querySelectorAll('.exit-total').forEach(x=>x.textContent=D.exitPlayers);document.querySelectorAll('.primary-n').forEach(x=>x.textContent=D.primaryThreshold);$('#listings').textContent=D.rosterListings;$('#report-count').textContent=D.rosterReports;$('#unique').textContent=D.uniqueRosterPlayers;$('#established').textContent=D.establishedCount;$('#established-rate').textContent=pct(D.establishedCount/D.exitPlayers);$('#sustained').textContent=D.sustainedCount;$('#reached').textContent=D.observedReached;$('#unknown').textContent=D.unknownCount;$('#complete').textContent=D.completeCoveragePlayers;
+document.querySelectorAll('.exit-total').forEach(x=>x.textContent=D.exitPlayers);document.querySelectorAll('.primary-n').forEach(x=>x.textContent=D.primaryThreshold);$('#established').textContent=D.establishedCount;$('#sustained').textContent=D.sustainedCount;
 const topTier=D.tierBreakdown.find(x=>x.tier==='T0')||{count:0,shareOfConfirmed:0};$('#top-established').textContent=topTier.count;$('#elite-share').textContent=pct(topTier.shareOfConfirmed);$('#durability-share').textContent=pct(D.establishedCount?D.sustainedCount/D.establishedCount:0);
 const makeBar=(label,detail,count,total,color='')=>`<div class="hbar"><div class="hbar-label"><b>${esc(label)}</b><small>${esc(detail)}</small></div><div class="track"><div class="fill ${color}" style="width:${100*count/total}%"></div></div><div class="bar-value"><b>${count}/${total}</b><small>${pct(count/total)}</small></div></div>`;
 $('#tier-bars').innerHTML=D.tierBreakdown.map((r,i)=>makeBar(r.label,`最高达标层级 · 已确认者中 ${pct(r.shareOfConfirmed)}`,r.count,D.exitPlayers,i?'gold':'')).join('');
 const controls=$('#thresholds');let active=D.primaryThreshold;function renderThreshold(){controls.innerHTML=D.overall.map(r=>`<button class="${r.threshold===active?'active':''}" data-n="${r.threshold}">≥ ${r.threshold} 场</button>`).join('');controls.querySelectorAll('button').forEach(b=>b.onclick=()=>{active=+b.dataset.n;renderThreshold()});const row=D.overall.find(r=>r.threshold===active);$('#threshold-bars').innerHTML=makeBar('单赛季站稳','至少一个赛季达到阈值',row.established,row.total)+makeBar('多赛季站稳','至少两个赛季达到阈值',row.sustained,row.total,'gold')}
 renderThreshold();$('#ladder').innerHTML=makeBar('获得机会','至少一次选定联赛出场',D.observedReached,D.exitPlayers)+makeBar('单赛季站稳',`一个赛季至少 ${D.primaryThreshold} 场`,D.establishedCount,D.exitPlayers,'gold')+makeBar('多赛季站稳',`至少两个赛季达到 ${D.primaryThreshold} 场`,D.sustainedCount,D.exitPlayers,'wine');
-const cohorts=D.cohorts.filter(x=>x.threshold===D.primaryThreshold);$('#cohort-chart').innerHTML=cohorts.map(r=>`<div class="cohort-row"><b>${r.exitSeason}</b><div class="cohort-bars"><div class="cohort-track"><div class="cohort-fill" style="width:${100*r.established/r.total}%"></div></div><div class="cohort-track"><div class="cohort-fill sustain" style="width:${100*r.sustained/r.total}%"></div></div></div><span>${r.established}/${r.total}</span></div>`).join('');
 function renderPlayers(){const query=$('#player-search').value.trim().toLocaleLowerCase();const status=$('#status-filter').value;const rows=D.players.filter(r=>(!query||r.player_name.toLocaleLowerCase().includes(query))&&(status==='all'||r.status===status));$('#player-rows').innerHTML=rows.map(r=>`<tr><td><b>${esc(r.player_name)}</b></td><td>${r.exit_season_start}</td><td>${esc(tierLabel(r.highest_reached_tier))}</td><td>${esc(tierLabel(r.established_tier))}</td><td>${esc(tierLabel(r.sustained_tier))}</td><td><span class="tag ${r.status==='unknown'?'unknown':''}">${r.status==='reached'?'已确认站稳':'尚无法判断'}</span></td></tr>`).join('')}
 $('#player-search').addEventListener('input',renderPlayers);$('#status-filter').addEventListener('change',renderPlayers);renderPlayers();})();
 </script></body></html>"""

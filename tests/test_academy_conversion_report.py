@@ -119,11 +119,15 @@ def test_report_labels_partial_results_as_lower_bounds(tmp_path):
     render_report(summaries, outcomes, rosters, output)
 
     html = output.read_text()
-    assert "青训产出的价值与代价" in html
-    assert "同一套青训体系，两种真实" in html
+    assert "顶级青训的两面" in html
+    assert "顶级青训同时生产顶级价值，也生产职业不确定性" in html
     assert "五大联赛顶级联赛" in html
     assert "这不是淘汰漏斗" in html
-    assert "完整覆盖球员" in html
+    assert "对球员与家庭：入选不是承诺" in html
+    assert "7 份官方年报中的 roster-season 行" not in html
+    assert "底层仍保留可复现" not in html
+    assert '"rosterReports"' not in html
+    assert '"uniqueRosterPlayers"' not in html
     assert '"analysisComplete":false' in html
     assert '"primaryThreshold":15' in html
     assert '"observedReached":1' in html

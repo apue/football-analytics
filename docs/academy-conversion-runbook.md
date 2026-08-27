@@ -72,6 +72,11 @@ The public-facing report frames academy output through two simultaneous lenses:
   senior role, while incomplete evidence must remain unknown rather than being
   described as failure.
 
+The editorial order is **claim -> evidence -> implication**. The public sample
+is the 85 target exit-cohort players. Boundary-detection rosters, roster-season
+row counts, report counts, and the larger identity universe are audit metadata,
+not reader-facing findings, and stay out of the narrative.
+
 Reader-facing copy uses football meanings such as “五大联赛顶级联赛” and
 “多赛季站稳”. Internal tier codes remain available in the embedded audit data
 but are not required background knowledge. The report distinguishes academy
