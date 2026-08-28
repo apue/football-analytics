@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "study_id": "academy-squad-exit-start-exit-end",
+  "academy": {
+    "academy_id": "stable-academy-id",
+    "display_name": "Academy display name",
+    "squad_name": "Exact oldest-youth squad name"
+  },
+  "cohorts": {
+    "roster_season_start": 2015,
+    "roster_season_end": 2021,
+    "exit_season_start": 2015,
+    "exit_season_end": 2019,
+    "observation_season_count": 5
+  },
+  "outcomes": {
+    "primary_appearance_threshold": 15,
+    "sensitivity_thresholds": [10, 15, 20],
+    "sustained_qualifying_seasons": 2,
+    "competition_policy_path": "config/academy_conversion/competition-policy.json"
+  },
+  "roster_source": {
+    "adapter": "adapter-name",
+    "config_path": "config/academy_conversion/roster-source.json",
+    "policy_status": "pending"
+  },
+  "adult_source": {
+    "adapter": "adapter-name",
+    "scope_id": "source-scope-version",
+    "policy_status": "pending"
+  },
+  "outputs": {
+    "run_dir": "data/processed/academy-conversion/runs/study-id",
+    "report_path": "data/processed/academy-conversion/runs/study-id/report/index.html",
+    "language": "zh-CN"
+  }
+}

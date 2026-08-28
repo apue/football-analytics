@@ -1,15 +1,40 @@
 ---
 name: academy-conversion-research
-description: Build or operate the repository's auditable academy-to-senior conversion pipeline, including source health checks, roster and career acquisition, deterministic parsing, cohort validation, competition-tier outcomes, bounded worker shards, and report data. Use for youth-academy conversion studies such as Barcelona Juvenil A. Do not use for match-event analysis or scouting predictions.
+description: Run repeatable academy-to-senior studies from a named academy squad and exit interval through source approval, roster and career acquisition, deterministic analysis, and a thesis-led visual report. Use for requests such as Barcelona Juvenil A or Real Madrid U19 from 2015 to 2020. Do not use for match-event analysis or scouting predictions.
 ---
 
 # Academy Conversion Research
 
-Use the repository pipeline as the source of truth. Scripts acquire, parse,
-validate, and calculate; agents operate bounded work and explain exceptions.
+Use the repository pipeline as the source of truth. The user supplies an academy
+squad and cohort interval; scripts acquire, parse, validate, calculate, and
+render. Agents resolve source and identity exceptions without performing joins,
+counts, thresholds, or percentages by hand.
+
+## Study request interface
+
+An end-to-end request needs only:
+
+- the exact academy squad, such as `Real Madrid U19` rather than the whole club;
+- the target final-roster-season interval, such as `2015-16 through 2019-20`.
+
+Unless the user overrides them, preserve the established defaults: every named
+season-roster player is in the denominator, the next five complete seasons are
+observed, 15 domestic senior-league appearances means one-season establishment,
+two qualifying seasons means sustained establishment, and 10/15/20 are the
+sensitivity thresholds. Do not silently broaden or narrow the squad definition.
+
+Before starting a new study, read [run-contract.md](references/run-contract.md)
+and [end-to-end-study.md](references/end-to-end-study.md). Copy and complete
+[study-config.template.json](assets/study-config.template.json) so the research
+request is frozen outside the chat transcript. Validate it with
+`uv run python .codex/skills/academy-conversion-research/scripts/validate_study_config.py <study-config>`;
+add `--require-approved` before live acquisition.
 
 ## Select a mode
 
+- **End-to-end study mode:** default for a named academy and interval. Create a
+  frozen study configuration, onboard sources if needed, run every validated
+  stage, and deliver the local report plus auditable data.
 - **Supervisor mode:** create or approve a run, freeze configuration, assign
   shards, merge validated outputs, and own research claims.
 - **Worker mode:** execute one existing immutable shard and return a handoff.
@@ -17,14 +42,15 @@ validate, and calculate; agents operate bounded work and explain exceptions.
 - **Source-adapter mode:** diagnose or add one provider/page parser. Use golden
   fixtures and contract tests before enabling it for a run.
 
-Read [run-contract.md](references/run-contract.md) for every mode. In worker
-mode also read [worker-handoff.md](references/worker-handoff.md). When a run
-touches an external site, read [provider-policy.md](references/provider-policy.md).
+In worker mode also read [worker-handoff.md](references/worker-handoff.md). When
+a run touches an external site, read [provider-policy.md](references/provider-policy.md).
+Before rendering or revising a public report, read
+[report-contract.md](references/report-contract.md).
 
 ## Required workflow
 
-1. Inspect the run configuration and validation state. Never reconstruct
-   research rules from chat or page content.
+1. Inspect or create the frozen study configuration and validation state. Never
+   reconstruct research rules from chat or page content once a run exists.
 2. Run `uv run academy-conversion health` before creating a live acquisition
    manifest. A service pass is insufficient: the target content contract must
    pass.
@@ -40,8 +66,11 @@ touches an external site, read [provider-policy.md](references/provider-policy.m
    disposition; do not convert missing data to zero.
 7. The supervisor runs deterministic merge and analysis after every shard
    validates.
-8. Report artifact paths, counts, failures, and unrun checks. Never report a
-   conversion rate from an incomplete or unvalidated run.
+8. Render only from validated artifacts. A report template may be improved and
+   rerun without reacquiring unchanged source evidence.
+9. Report the study config, data tree, visual report, coverage, failures, checks,
+   branch, and commit. Never report a complete conversion rate from an incomplete
+   or unvalidated run.
 
 ## Canonical commands
 
@@ -69,6 +98,10 @@ identity conflicts, source conflicts, and narrative drafts from validated
 summary JSON. Use code for joins, season windows, competition eligibility,
 thresholds, aggregation, and percentages.
 
+For a new academy, adding or validating its roster adapter is part of the study,
+not a reason to copy names manually. Reuse an existing adapter only after its
+content contract passes against the new source layout.
+
 ## Safety and provenance
 
 - Load credentials only from the requested env file; never print their values.
@@ -79,6 +112,8 @@ thresholds, aggregation, and percentages.
   on every accepted record.
 - Raw acquisition belongs under ignored `data/processed/` run directories.
 - Public output must follow the source policy and repository attribution rules.
+- Automated Transfermarkt collection remains prohibited without written
+  permission; Firecrawl does not change the target site's usage policy.
 
 ## Stop conditions
 

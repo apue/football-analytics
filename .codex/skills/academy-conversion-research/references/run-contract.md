@@ -2,13 +2,22 @@
 
 ## Immutable configuration
 
-Each run records an academy ID, roster source adapter, roster seasons used for
-boundary detection, exit-cohort range, observation-season count, thresholds,
-competition-policy version, provider, and source-policy status.
+Each run starts from a completed copy of the skill's study-config template and
+records an academy ID, exact squad name, roster source adapter, roster seasons
+used for boundary detection, inclusive exit-cohort range, observation-season
+count, thresholds, competition-policy version, adult source scope, provider,
+source-policy statuses, and output locations.
+
+Store reusable study definitions under
+`config/academy_conversion/studies/<study-id>.json`. Do not overwrite a frozen
+definition to change cohort or source policy; create a new study ID or explicitly
+version the configuration. Raw attempts and rendered outputs live under the
+configured ignored run directory.
 
 Barcelona version one uses roster seasons 2015-16 through at least 2021-22,
 selects final roster seasons 2015-16 through 2019-20, observes five following
 complete seasons, and evaluates thresholds 10, 15, and 20 with 15 primary.
+This is an example, not a default academy or fixed calendar range.
 
 ## Stage state
 

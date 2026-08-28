@@ -1,4 +1,4 @@
 interface:
   display_name: "Academy Conversion Research"
-  short_description: "Run auditable academy-to-senior conversion research"
-  default_prompt: "Use the academy conversion pipeline to process the assigned run or shard and report validated outputs."
+  short_description: "Turn academy cohorts into auditable career reports"
+  default_prompt: "Use the academy conversion pipeline to research the named oldest-youth squad and exit interval, then deliver validated data and a local visual report."
