@@ -22,11 +22,28 @@ Official roster reports use
 acquire its manifest, require `validate-run` to pass, then parse with:
 
 ```bash
+uv run academy-conversion manifest \
+  --study-config config/academy_conversion/studies/<study-id>.json \
+  --config <roster-source-config> \
+  --output <configured-run-dir>/manifest.jsonl
+uv run academy-conversion acquire \
+  --study-config config/academy_conversion/studies/<study-id>.json \
+  --config <roster-source-config> \
+  --manifest <configured-run-dir>/manifest.jsonl \
+  --run-dir <configured-run-dir>
+uv run academy-conversion validate-run \
+  --study-config config/academy_conversion/studies/<study-id>.json \
+  --run-dir <configured-run-dir>
 uv run --with pymupdf academy-conversion parse-official-rosters \
-  --config config/academy_conversion/barcelona_juvenil_a_rosters.json \
-  --run-dir <official-source-run> \
-  --output-dir <parsed-output>
+  --study-config config/academy_conversion/studies/<study-id>.json \
+  --config <roster-source-config> \
+  --run-dir <configured-run-dir> \
+  --output-dir <configured-run-dir>/parsed-rosters
 ```
+
+These stages fail if the supplied source config or run directory differs from
+the frozen study, if its academy or roster seasons differ, or if an output
+escapes the configured run directory.
 
 Roster candidates do not become denominator facts until a reviewed identity
 table passes `resolve-rosters`. Worker alias proposals are merged only through
@@ -39,30 +56,31 @@ Analysis consumes four source-neutral CSVs documented in
 
 ```bash
 uv run academy-conversion analyze \
+  --study-config config/academy_conversion/studies/<study-id>.json \
   --rosters <roster-memberships.csv> \
   --appearances <appearances.csv> \
   --competitions <competitions.csv> \
   --coverage <coverage.csv> \
-  --output-dir <analysis-output> \
-  --exit-start 2015 --exit-end 2019 --thresholds 10,15,20
+  --output-dir <analysis-output>
 ```
 
 Render the local report only from validated analysis artifacts:
 
 ```bash
 uv run academy-conversion render-report \
+  --study-config config/academy_conversion/studies/<study-id>.json \
   --summary <analysis-output>/cohort_summary.csv \
   --outcomes <analysis-output>/player_threshold_outcomes.csv \
-  --rosters <roster-memberships.csv> \
   --appearances <facts>/appearances.csv \
-  --competition-policy config/academy_conversion/competition_policy_prototype_v1.json \
-  --output <run>/report/index.html \
-  --primary-threshold 15
+  --competitions <facts>/competitions.csv
 ```
 
 Every analysis run also emits `provenance.json`, containing the four input
 artifact paths, roster/appearance/coverage source URLs, and competition-policy
-versions used for the derived outcomes.
+versions used for the derived outcomes. It also records the exact study config
+and normalized study summary. Cohort bounds, observation length, thresholds,
+sustained-season count, competition policy, report identity, and report output
+path come from that frozen config rather than parallel CLI flags.
 
 ## Editorial report contract
 
@@ -75,7 +93,7 @@ The public-facing report frames academy output through two simultaneous lenses:
   described as failure.
 
 The editorial order is **claim -> evidence -> implication**. The public sample
-is the 85 target exit-cohort players. Boundary-detection rosters, roster-season
+is the study's configured exit cohort. Boundary-detection rosters, roster-season
 row counts, report counts, and the larger identity universe are audit metadata,
 not reader-facing findings, and stay out of the narrative.
 

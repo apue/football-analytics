@@ -35,6 +35,10 @@ uv run academy-conversion resolve-rosters \
 
 ## Analysis inputs
 
+- `config/academy_conversion/studies/<study-id>.json`: academy and squad
+  identity, cohort and observation windows, thresholds, sustained-season count,
+  competition-policy path, roster-source config, source policy, run directory,
+  and report metadata
 - `roster_memberships.csv`: `player_id,player_name,academy_id,season_start,source_url`
 - `appearances.csv`: `player_id,season_start,club_id,competition_id,appearances,source_url`
 - `competitions.csv`: `competition_id,season_start,tier,tier_rank,eligible_domestic_league,policy_version`
@@ -53,10 +57,19 @@ changing raw appearance facts. The first version is intentionally static;
 future policies may add season validity fields when historical reclassification
 materially affects a result.
 
+`reporting_bands` independently defines nested reader-facing outcome groups.
+A band with `tiers: null` contains every competition whose rule has
+`eligible_domestic_league=true`; narrower bands list accepted achievement tiers.
+This keeps “professional career” separate from “competitive height”.
+
 `complete` coverage means all competitions in the declared scope were checked
 for that player-season, including verified zero appearances. `partial` means
 some scope was checked. `missing` means the required scope was not checked.
 An absent coverage row is also unknown.
+
+Acquisition, roster parsing, fact construction, analysis, and rendering load the
+same study config. Commands reject a different academy, roster-season window,
+source config, run directory, or output path outside that run directory.
 
 ## Analysis outputs
 

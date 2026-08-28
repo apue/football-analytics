@@ -22,12 +22,15 @@
   "roster_source": {
     "adapter": "adapter-name",
     "config_path": "config/academy_conversion/roster-source.json",
-    "policy_status": "pending"
+    "policy_status": "pending",
+    "public_url": "https://example.com/official-roster-source"
   },
   "adult_source": {
     "adapter": "adapter-name",
     "scope_id": "source-scope-version",
-    "policy_status": "pending"
+    "policy_status": "pending",
+    "public_url": "https://example.com/adult-career-source",
+    "coverage_note": "Describe complete or missing competition and player coverage."
   },
   "outputs": {
     "run_dir": "data/processed/academy-conversion/runs/study-id",

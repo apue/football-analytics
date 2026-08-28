@@ -21,7 +21,9 @@ uv lock --check
 uv run --with pyyaml python \
   /Users/yangtian/.codex/skills/.system/skill-creator/scripts/quick_validate.py \
   .codex/skills/academy-conversion-research
-uv run academy-conversion validate-run --run-dir <fixture-run>
+uv run academy-conversion validate-run \
+  --study-config <fixture-study.json> \
+  --run-dir <fixture-run>
 ```
 
 The report is self-contained HTML and is checked through a local HTTP server

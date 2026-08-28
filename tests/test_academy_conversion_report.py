@@ -1,6 +1,8 @@
 import csv
 import json
 
+import pytest
+
 from football_analytics.academy_conversion_report import render_report
 
 
@@ -11,12 +13,69 @@ def _write_csv(path, fields, rows):
         writer.writerows(rows)
 
 
-def test_report_labels_partial_results_as_lower_bounds(tmp_path):
+def _write_study(
+    path,
+    policy,
+    output,
+    *,
+    thresholds=(15,),
+    primary=15,
+    observation_seasons=5,
+    sustained_seasons=2,
+):
+    path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "study_id": "real-madrid-u19-2019-2019",
+                "academy": {
+                    "academy_id": "real-madrid-u19",
+                    "display_name": "皇马青训",
+                    "squad_name": "Real Madrid U19",
+                },
+                "cohorts": {
+                    "roster_season_start": 2019,
+                    "roster_season_end": 2021,
+                    "exit_season_start": 2019,
+                    "exit_season_end": 2019,
+                    "observation_season_count": observation_seasons,
+                },
+                "outcomes": {
+                    "primary_appearance_threshold": primary,
+                    "sensitivity_thresholds": list(thresholds),
+                    "sustained_qualifying_seasons": sustained_seasons,
+                    "competition_policy_path": str(policy),
+                },
+                "roster_source": {
+                    "adapter": "official",
+                    "config_path": str(path.parent / "roster-source.json"),
+                    "policy_status": "approved",
+                    "public_url": "https://club.example/academy",
+                },
+                "adult_source": {
+                    "adapter": "licensed",
+                    "scope_id": "complete-v1",
+                    "policy_status": "approved",
+                    "public_url": "https://data.example/careers",
+                    "coverage_note": "完整覆盖声明范围内的职业联赛。",
+                },
+                "outputs": {
+                    "run_dir": str(output.parent),
+                    "report_path": str(output),
+                    "language": "zh-CN",
+                },
+            }
+        )
+    )
+
+
+def test_report_uses_study_identity_bands_and_real_leagues(tmp_path):
     summaries = tmp_path / "summary.csv"
     outcomes = tmp_path / "outcomes.csv"
-    rosters = tmp_path / "rosters.csv"
     appearances = tmp_path / "appearances.csv"
+    competitions = tmp_path / "competitions.csv"
     policy = tmp_path / "policy.json"
+    study = tmp_path / "study.json"
     output = tmp_path / "index.html"
     _write_csv(
         summaries,
@@ -24,17 +83,8 @@ def test_report_labels_partial_results_as_lower_bounds(tmp_path):
             "exit_season_start",
             "threshold",
             "total_players",
-            "classified_players",
-            "complete_coverage_players",
-            "unknown_players",
             "established_players",
-            "established_rate_complete_coverage",
-            "established_rate_all",
-            "sustained_classified_players",
-            "sustained_unknown_players",
             "sustained_players",
-            "sustained_rate_complete_coverage",
-            "sustained_rate_all",
             "analysis_complete",
         ],
         [
@@ -42,18 +92,9 @@ def test_report_labels_partial_results_as_lower_bounds(tmp_path):
                 "exit_season_start": 2019,
                 "threshold": 15,
                 "total_players": 2,
-                "classified_players": 1,
-                "complete_coverage_players": 0,
-                "unknown_players": 1,
                 "established_players": 1,
-                "established_rate_complete_coverage": 0,
-                "established_rate_all": 0.5,
-                "sustained_classified_players": 0,
-                "sustained_unknown_players": 2,
                 "sustained_players": 0,
-                "sustained_rate_complete_coverage": 0,
-                "sustained_rate_all": 0,
-                "analysis_complete": False,
+                "analysis_complete": True,
             }
         ],
     )
@@ -77,12 +118,12 @@ def test_report_labels_partial_results_as_lower_bounds(tmp_path):
                 "player_name": "One",
                 "exit_season_start": 2019,
                 "threshold": 15,
-                "established_tier": "T0",
+                "established_tier": "ELITE",
                 "sustained_tier": "",
                 "status": "reached",
-                "sustained_status": "unknown",
-                "highest_reached_tier": "T0",
-                "coverage_complete": False,
+                "sustained_status": "not_reached",
+                "highest_reached_tier": "ELITE",
+                "coverage_complete": True,
             },
             {
                 "player_id": "p2",
@@ -91,30 +132,10 @@ def test_report_labels_partial_results_as_lower_bounds(tmp_path):
                 "threshold": 15,
                 "established_tier": "",
                 "sustained_tier": "",
-                "status": "unknown",
-                "sustained_status": "unknown",
+                "status": "not_reached",
+                "sustained_status": "not_reached",
                 "highest_reached_tier": "",
-                "coverage_complete": False,
-            },
-        ],
-    )
-    _write_csv(
-        rosters,
-        ["player_id", "player_name", "academy_id", "season_start", "source_url"],
-        [
-            {
-                "player_id": "p1",
-                "player_name": "One",
-                "academy_id": "academy",
-                "season_start": 2019,
-                "source_url": "official",
-            },
-            {
-                "player_id": "p2",
-                "player_name": "Two",
-                "academy_id": "academy",
-                "season_start": 2019,
-                "source_url": "official",
+                "coverage_complete": True,
             },
         ],
     )
@@ -139,65 +160,136 @@ def test_report_labels_partial_results_as_lower_bounds(tmp_path):
             }
         ],
     )
+    _write_csv(
+        competitions,
+        [
+            "competition_id",
+            "season_start",
+            "tier",
+            "tier_rank",
+            "eligible_domestic_league",
+            "policy_version",
+        ],
+        [
+            {
+                "competition_id": "ES1",
+                "season_start": 2020,
+                "tier": "ELITE",
+                "tier_rank": 0,
+                "eligible_domestic_league": True,
+                "policy_version": "v1",
+            }
+        ],
+    )
     policy.write_text(
         json.dumps(
             {
-                "tiers": {"T0": ["ES1"]},
-                "tier_ranks": {"T0": 0},
+                "policy_version": "v1",
+                "tier_labels_zh": {"ELITE": "五大联赛"},
+                "reporting_bands": [
+                    {
+                        "id": "professional",
+                        "label_zh": "职业联赛",
+                        "detail_zh": "所有职业联赛",
+                        "tiers": None,
+                    },
+                    {
+                        "id": "higher-level",
+                        "label_zh": "较高水平职业联赛",
+                        "detail_zh": "选定高水平联赛",
+                        "tiers": ["ELITE"],
+                    },
+                    {
+                        "id": "big-five",
+                        "label_zh": "五大联赛",
+                        "detail_zh": "五大联赛顶级联赛",
+                        "tiers": ["ELITE"],
+                    },
+                ],
                 "competition_metadata": {"ES1": {"name_zh": "西甲"}},
             }
         )
     )
-
-    render_report(
-        summaries,
-        outcomes,
-        rosters,
+    _write_study(
+        study,
+        policy,
         output,
-        appearances_path=appearances,
-        competition_policy_path=policy,
+        observation_seasons=6,
+        sustained_seasons=3,
     )
 
-    html = output.read_text()
-    assert "顶级青训的两面" in html
-    assert "顶级青训同时生产顶级价值，也生产职业不确定性" in html
-    assert "五大联赛顶级联赛" in html
-    assert "联赛水平 × 职业持续性" in html
-    assert "职业联赛宽度尚未完整覆盖" in html
-    assert "对球员与家庭：入选不是承诺" in html
-    assert "五年内站稳的代表联赛" in html
+    rendered = render_report(summaries, outcomes, appearances, competitions, study)
+
+    html = rendered.read_text()
+    assert rendered == output
+    assert '"academyName":"皇马青训"' in html
+    assert '"squadName":"Real Madrid U19"' in html
+    assert '"observationSeasons":6' in html
+    assert '"sustainedSeasons":3' in html
     assert '"representative_leagues":"西甲"' in html
-    assert '"levelMatrix"' in html
-    assert "7 份官方年报中的 roster-season 行" not in html
-    assert "底层仍保留可复现" not in html
-    assert '"rosterReports"' not in html
-    assert '"uniqueRosterPlayers"' not in html
-    assert '"analysisComplete":false' in html
-    assert '"primaryThreshold":15' in html
-    assert '"observedReached":1' in html
-    assert '"establishedCount":1' in html
-    assert '"unknownCount":1' in html
-    assert "One" in html
+    assert '"id":"professional"' in html
+    assert '"established":1' in html
+    assert "完整观察下未达标" in html
+    assert "足球解释" in html
+    assert "指标结果" in html
+    assert "数据事实" in html
+    assert "至少两个赛季" not in html
+    assert "五年内站稳" not in html
+    assert "巴萨" not in html
+    assert " / 85" not in html
+    assert '"analysisComplete"' not in html
+    assert '"observedReached"' not in html
 
-    summaries_10 = tmp_path / "summary-10.csv"
-    outcomes_10 = tmp_path / "outcomes-10.csv"
-    with summaries.open(newline="") as handle:
-        reader = csv.DictReader(handle)
-        summary_rows = [{**row, "threshold": "10"} for row in reader]
-        summary_fields = tuple(reader.fieldnames or ())
-    with outcomes.open(newline="") as handle:
-        reader = csv.DictReader(handle)
-        outcome_rows = [{**row, "threshold": "10"} for row in reader]
-        outcome_fields = tuple(reader.fieldnames or ())
-    _write_csv(summaries_10, summary_fields, summary_rows)
-    _write_csv(outcomes_10, outcome_fields, outcome_rows)
 
-    render_report(
-        summaries_10,
-        outcomes_10,
-        rosters,
-        tmp_path / "report-10.html",
-        primary_threshold=10,
+def test_report_rejects_thresholds_that_disagree_with_study(tmp_path):
+    summary = tmp_path / "summary.csv"
+    outcomes = tmp_path / "outcomes.csv"
+    appearances = tmp_path / "appearances.csv"
+    competitions = tmp_path / "competitions.csv"
+    policy = tmp_path / "policy.json"
+    study = tmp_path / "study.json"
+    output = tmp_path / "index.html"
+    _write_csv(summary, ["analysis_complete"], [{"analysis_complete": True}])
+    _write_csv(
+        outcomes,
+        ["threshold"],
+        [{"threshold": 10}],
     )
+    _write_csv(
+        appearances,
+        [
+            "player_id",
+            "season_start",
+            "club_id",
+            "competition_id",
+            "appearances",
+            "source_url",
+        ],
+        [],
+    )
+    _write_csv(
+        competitions,
+        [
+            "competition_id",
+            "season_start",
+            "tier",
+            "tier_rank",
+            "eligible_domestic_league",
+            "policy_version",
+        ],
+        [
+            {
+                "competition_id": "ES1",
+                "season_start": 2020,
+                "tier": "ELITE",
+                "tier_rank": 0,
+                "eligible_domestic_league": True,
+                "policy_version": "v1",
+            }
+        ],
+    )
+    policy.write_text(json.dumps({"policy_version": "v1"}))
+    _write_study(study, policy, output, thresholds=(15,), primary=15)
 
-    assert '"primaryThreshold":10' in (tmp_path / "report-10.html").read_text()
+    with pytest.raises(ValueError, match="outcome thresholds do not match"):
+        render_report(summary, outcomes, appearances, competitions, study)

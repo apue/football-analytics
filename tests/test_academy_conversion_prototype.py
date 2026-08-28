@@ -1,12 +1,39 @@
 import csv
 import gzip
+import json
 
 from football_analytics.academy_conversion import RosterMembership
 from football_analytics.academy_conversion_prototype import (
     SourcePlayerLink,
     build_match_row_prototype_facts,
+    load_competition_policy,
     merge_source_link_proposals,
 )
+
+
+def test_competition_policy_keeps_career_eligibility_separate_from_tier(tmp_path):
+    path = tmp_path / "policy.json"
+    path.write_text(
+        json.dumps(
+            {
+                "policy_version": "v1",
+                "tier_ranks": {"PRO": 2},
+                "tiers": {"PRO": ["eligible", "excluded"]},
+                "competition_metadata": {
+                    "eligible": {"career_eligible": True},
+                    "excluded": {"career_eligible": False},
+                },
+            }
+        )
+    )
+
+    version, policy = load_competition_policy(path)
+
+    assert version == "v1"
+    assert policy == {
+        "eligible": ("PRO", 2, True),
+        "excluded": ("PRO", 2, False),
+    }
 
 
 def test_merge_source_link_proposals_accepts_only_confirmed_non_conflicts():
@@ -115,7 +142,8 @@ def test_prototype_adapter_counts_match_rows_and_marks_coverage_partial(tmp_path
         appearances,
         {"ES1": ("T0", 0, True), "CDR": ("excluded", 99, False)},
         source_url="prototype-dataset",
-        scope_id="prototype-v1-partial",
+        policy_version="competition-policy-v1",
+        coverage_scope_id="prototype-v1-partial",
     )
 
     assert len(facts.appearances) == 2
@@ -129,4 +157,5 @@ def test_prototype_adapter_counts_match_rows_and_marks_coverage_partial(tmp_path
         ("p1", "partial"),
         ("p2", "missing"),
     }
-    assert {row.policy_version for row in facts.rules} == {"prototype-v1-partial"}
+    assert {row.policy_version for row in facts.rules} == {"competition-policy-v1"}
+    assert {row.scope_id for row in facts.coverage} == {"prototype-v1-partial"}

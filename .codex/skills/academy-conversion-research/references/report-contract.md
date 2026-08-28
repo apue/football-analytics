@@ -15,8 +15,8 @@ Use a top-down structure:
    Five and other explicitly named high-level leagues.
 3. Show professional breadth for families: establishment in any eligible
    professional league, higher-level professional leagues, and the Big Five.
-4. Cross each level with durability: at least one qualifying season versus at
-   least two.
+4. Cross each level with durability: at least one qualifying season versus the
+   configured sustained-season count.
 5. Return aggregate categories to concrete player pathways.
 6. Close with interpretation, denominator boundary, coverage, and causal limits.
 

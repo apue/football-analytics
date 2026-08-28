@@ -79,6 +79,11 @@ stage commands are `manifest`, `acquire`, `validate-run`,
 `parse-official-rosters`, `resolve-rosters`, `merge-source-link-proposals`,
 `build-match-row-prototype`, `analyze`, and `render-report`.
 
+Pass the frozen `--study-config` to every command that exposes it. Do not use
+parallel CLI paths to override its source config, academy, season window, run
+directory, adult-source URL, or report destination; the commands fail closed on
+those mismatches.
+
 `merge-source-link-proposals` accepts only reviewed `confirmed` proposals and
 fails on unknown players, duplicate proposals, identity conflicts, or reused
 source IDs. `--source-players` is required so every proposed external ID is

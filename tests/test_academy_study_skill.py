@@ -69,3 +69,19 @@ def test_named_academy_and_interval_form_a_runnable_study(tmp_path):
     assert summary["study_id"] == "real-madrid-u19-2015-2020"
     assert summary["squad_name"] == "Real Madrid U19"
     assert summary["exit_seasons"] == [2015, 2020]
+
+
+def test_template_rejects_an_unsupported_report_language(tmp_path):
+    config = json.loads(TEMPLATE.read_text())
+    config["outputs"]["language"] = "en"
+    path = tmp_path / "study.json"
+    path.write_text(json.dumps(config))
+
+    result = subprocess.run(
+        [sys.executable, str(SCRIPT), str(path)],
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode != 0
+    assert "currently supports only zh-CN" in result.stderr

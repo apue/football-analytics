@@ -346,27 +346,25 @@ def calculate_player_outcomes(
     coverage: Iterable[CoverageRow],
     *,
     thresholds: tuple[int, ...] = (10, 15, 20),
+    observation_season_count: int = 5,
+    sustained_qualifying_seasons: int = 2,
 ) -> list[PlayerOutcome]:
     """Calculate reached, established, and sustained tiers per player."""
 
-    rule_index = {
-        (row.competition_id, row.season_start): row
-        for row in rules
-        if row.eligible_domestic_league
-    }
-    exact: dict[str, dict[tuple[int, int], int]] = defaultdict(lambda: defaultdict(int))
-    labels: dict[int, set[str]] = defaultdict(set)
-    for row in appearances:
-        rule = rule_index.get((row.competition_id, row.season_start))
-        if rule is None or row.appearances <= 0:
-            continue
-        exact[row.player_id][(row.season_start, rule.tier_rank)] += row.appearances
-        labels[rule.tier_rank].add(rule.tier)
+    if sustained_qualifying_seasons < 2:
+        raise ValueError("sustained qualifying seasons must be at least two")
+    if sustained_qualifying_seasons > observation_season_count:
+        raise ValueError(
+            "sustained qualifying seasons cannot exceed the observation window"
+        )
+    exact, _, labels, _ = aggregate_eligible_appearances(appearances, rules)
 
     coverage_index = {(row.player_id, row.season_start): row.status for row in coverage}
     results: list[PlayerOutcome] = []
     for cohort in cohorts:
-        seasons = observation_seasons(cohort.exit_season_start)
+        seasons = observation_seasons(
+            cohort.exit_season_start, observation_season_count
+        )
         player_exact = {
             key: value
             for key, value in exact.get(cohort.player_id, {}).items()
@@ -404,7 +402,7 @@ def calculate_player_outcomes(
                 qualifying_seasons = {
                     season for season, rank in qualifying if rank <= candidate_rank
                 }
-                if len(qualifying_seasons) >= 2:
+                if len(qualifying_seasons) >= sustained_qualifying_seasons:
                     sustained_rank = candidate_rank
                     break
             sustained[threshold] = (
@@ -434,6 +432,98 @@ def calculate_player_outcomes(
             )
         )
     return results
+
+
+def aggregate_eligible_appearances(
+    appearances: Iterable[AppearanceRow], rules: Iterable[CompetitionRule]
+) -> tuple[
+    dict[str, dict[tuple[int, int], int]],
+    dict[tuple[str, int, str], int],
+    dict[int, set[str]],
+    dict[tuple[str, int], int],
+]:
+    """Aggregate eligible league appearances once for analysis and reporting."""
+
+    rule_index = {
+        (row.competition_id, row.season_start): row
+        for row in rules
+        if row.eligible_domestic_league
+    }
+    by_level: dict[str, dict[tuple[int, int], int]] = defaultdict(
+        lambda: defaultdict(int)
+    )
+    by_competition: dict[tuple[str, int, str], int] = defaultdict(int)
+    labels: dict[int, set[str]] = defaultdict(set)
+    ranks: dict[tuple[str, int], int] = {}
+    for row in appearances:
+        rule = rule_index.get((row.competition_id, row.season_start))
+        if rule is None or row.appearances <= 0:
+            continue
+        by_level[row.player_id][(row.season_start, rule.tier_rank)] += row.appearances
+        by_competition[(row.player_id, row.season_start, row.competition_id)] += (
+            row.appearances
+        )
+        labels[rule.tier_rank].add(rule.tier)
+        ranks[(row.competition_id, row.season_start)] = rule.tier_rank
+    return (
+        {player: dict(values) for player, values in by_level.items()},
+        dict(by_competition),
+        {rank: set(values) for rank, values in labels.items()},
+        ranks,
+    )
+
+
+def select_representative_competitions(
+    exit_seasons: Mapping[str, int],
+    appearances: Iterable[AppearanceRow],
+    rules: Iterable[CompetitionRule],
+    *,
+    threshold: int,
+    observation_season_count: int = 5,
+    limit: int = 2,
+) -> dict[str, tuple[str, ...]]:
+    """Select up to ``limit`` competitions involved in qualifying seasons."""
+
+    if threshold < 1:
+        raise ValueError("threshold must be positive")
+    if limit < 1:
+        raise ValueError("representative competition limit must be positive")
+    by_level, by_competition, _, ranks = aggregate_eligible_appearances(
+        appearances, rules
+    )
+    selected: dict[str, tuple[str, ...]] = {}
+    for player_id, exit_season in exit_seasons.items():
+        seasons = set(observation_seasons(exit_season, observation_season_count))
+        qualifying = {
+            (season, rank)
+            for (season, rank), count in by_level.get(player_id, {}).items()
+            if season in seasons and count >= threshold
+        }
+        candidates: dict[str, tuple[int, int, int]] = {}
+        for (candidate_player, season, competition_id), count in by_competition.items():
+            if candidate_player != player_id:
+                continue
+            rank = ranks[(competition_id, season)]
+            if (season, rank) not in qualifying:
+                continue
+            previous = candidates.get(competition_id, (rank, 0, 0))
+            candidates[competition_id] = (
+                min(rank, previous[0]),
+                max(count, previous[1]),
+                previous[2] + count,
+            )
+        selected[player_id] = tuple(
+            sorted(
+                candidates,
+                key=lambda competition_id: (
+                    candidates[competition_id][0],
+                    -candidates[competition_id][1],
+                    -candidates[competition_id][2],
+                    competition_id,
+                ),
+            )[:limit]
+        )
+    return selected
 
 
 def summarize_outcomes(

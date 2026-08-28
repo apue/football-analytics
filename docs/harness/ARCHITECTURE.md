@@ -20,10 +20,14 @@ transformations or shared output files.
   transport, cache identities, health and content contracts.
 - `football_analytics.academy_conversion`: source-neutral schemas, cohort and
   observation windows, tier rules, validation, and outcome calculation.
+- `football_analytics.academy_study`: validated, frozen study identity, source
+  policy, cohort window, thresholds, competition policy, and report metadata.
 - `football_analytics.academy_conversion_cli`: deterministic command entry
   point, registered as `academy-conversion` in `pyproject.toml`.
 - `.codex/skills/academy-conversion-research`: routing, workflow, stop gates,
   worker handoff contract, and thin helper scripts.
+- `config/academy_conversion/studies/<study-id>.json`: committed reusable study
+  definition; analysis and rendering reject parallel rule flags that disagree.
 - `data/processed/academy-conversion/runs/<run-id>`: ignored run state, raw
   evidence, parsed rows, quarantine records, and derived outputs.
 - `data/processed/academy-conversion/runs/<run-id>/report`: local visual report;

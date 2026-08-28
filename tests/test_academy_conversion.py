@@ -10,6 +10,7 @@ from football_analytics.academy_conversion import (
     calculate_player_outcomes,
     observation_seasons,
     resolve_roster_memberships,
+    select_representative_competitions,
     summarize_outcomes,
     validate_research_rows,
 )
@@ -65,6 +66,53 @@ def test_outcomes_do_not_add_different_tiers_to_cross_threshold():
     assert outcome.sustained_tiers[15] == "T1-A"
     assert outcome.threshold_status[15] == "reached"
     assert outcome.sustained_status[15] == "reached"
+
+
+def test_study_controls_observation_and_sustained_season_counts():
+    cohorts = [ExitCohort("p1", "One", "academy", 2019, 1)]
+    appearances = [
+        AppearanceRow("p1", season, "club", "league", 15, "source")
+        for season in (2020, 2021)
+    ]
+    rules = [
+        CompetitionRule("league", season, "PRO", 0, True) for season in (2020, 2021)
+    ]
+    coverage = [
+        CoverageRow("p1", season, "complete", "scope", "source")
+        for season in (2020, 2021, 2022)
+    ]
+
+    outcome = calculate_player_outcomes(
+        cohorts,
+        appearances,
+        rules,
+        coverage,
+        thresholds=(15,),
+        observation_season_count=3,
+        sustained_qualifying_seasons=3,
+    )[0]
+
+    assert outcome.threshold_status[15] == "reached"
+    assert outcome.sustained_status[15] == "not_reached"
+
+
+def test_representative_competitions_share_analysis_aggregation():
+    appearances = [
+        AppearanceRow("p1", 2020, "a", "BE1", 13, "source"),
+        AppearanceRow("p1", 2020, "b", "PO1", 4, "source"),
+        AppearanceRow("p1", 2021, "c", "IT1", 14, "source"),
+    ]
+    rules = [
+        CompetitionRule("BE1", 2020, "T1-A", 1, True),
+        CompetitionRule("PO1", 2020, "T1-A", 1, True),
+        CompetitionRule("IT1", 2021, "T0", 0, True),
+    ]
+
+    selected = select_representative_competitions(
+        {"p1": 2019}, appearances, rules, threshold=15
+    )
+
+    assert selected == {"p1": ("BE1", "PO1")}
 
 
 def test_below_threshold_is_unknown_when_observation_coverage_is_partial():

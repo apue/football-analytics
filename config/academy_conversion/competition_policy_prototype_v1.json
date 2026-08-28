@@ -9,6 +9,32 @@
     "T2": ["ARG1", "AUS1", "BRA1", "KR1", "MEX1", "MLS1", "NO1", "PL1", "RO1", "SA1", "SE1", "SER1", "TS1"]
   },
   "tier_ranks": {"T0": 0, "T1-A": 1, "T1-B": 1, "T2": 2},
+  "tier_labels_zh": {
+    "T0": "五大联赛",
+    "T1-A": "其他选定欧洲高水平联赛",
+    "T1-B": "日韩顶级联赛",
+    "T2": "其他选定职业联赛"
+  },
+  "reporting_bands": [
+    {
+      "id": "professional",
+      "label_zh": "任一纳入的职业联赛",
+      "detail_zh": "职业资格由联赛白名单独立决定",
+      "tiers": null
+    },
+    {
+      "id": "higher-level",
+      "label_zh": "较高水平职业联赛",
+      "detail_zh": "五大联赛及其他选定高水平联赛",
+      "tiers": ["T0", "T1-A", "T1-B"]
+    },
+    {
+      "id": "big-five",
+      "label_zh": "五大联赛",
+      "detail_zh": "英超、西甲、德甲、意甲、法甲",
+      "tiers": ["T0"]
+    }
+  ],
   "competition_metadata": {
     "A1": {"country": "Austria", "domestic_level": 1, "name_zh": "奥地利甲级联赛", "career_eligible": true},
     "ARG1": {"country": "Argentina", "domestic_level": 1, "name_zh": "阿根廷甲级联赛", "career_eligible": true},

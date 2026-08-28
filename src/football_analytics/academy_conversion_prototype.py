@@ -151,11 +151,23 @@ def load_competition_policy(
     value = json.loads(path.read_text())
     policy_version = str(value["policy_version"])
     ranks = value["tier_ranks"]
-    policy = {
-        competition_id: (tier, int(ranks[tier]), True)
-        for tier, competition_ids in value["tiers"].items()
-        for competition_id in competition_ids
-    }
+    metadata = value.get("competition_metadata", {})
+    policy = {}
+    for tier, competition_ids in value["tiers"].items():
+        for competition_id in competition_ids:
+            competition_metadata = metadata.get(competition_id)
+            if not isinstance(competition_metadata, dict) or not isinstance(
+                competition_metadata.get("career_eligible"), bool
+            ):
+                raise ValueError(
+                    "competition metadata must explicitly set career_eligible: "
+                    f"{competition_id}"
+                )
+            policy[competition_id] = (
+                tier,
+                int(ranks[tier]),
+                competition_metadata["career_eligible"],
+            )
     return policy_version, policy
 
 
@@ -200,15 +212,19 @@ def build_match_row_prototype_facts(
     competition_policy: Mapping[str, tuple[str, int, bool]],
     *,
     source_url: str,
-    scope_id: str,
+    policy_version: str,
+    coverage_scope_id: str,
     exit_start: int = 2015,
     exit_end: int = 2019,
+    observation_season_count: int = 5,
 ) -> PrototypeFacts:
     """Aggregate one-row-per-match appearances without claiming full coverage."""
 
     cohorts = build_exit_cohorts(memberships, exit_start=exit_start, exit_end=exit_end)
     seasons_by_player = {
-        cohort.player_id: set(observation_seasons(cohort.exit_season_start))
+        cohort.player_id: set(
+            observation_seasons(cohort.exit_season_start, observation_season_count)
+        )
         for cohort in cohorts
     }
     link_rows = list(links)
@@ -278,7 +294,7 @@ def build_match_row_prototype_facts(
             competition_policy[competition_id][0],
             competition_policy[competition_id][1],
             competition_policy[competition_id][2],
-            scope_id,
+            policy_version,
         )
         for competition_id, season_start in sorted(
             {(row.competition_id, row.season_start) for row in appearance_facts}
@@ -290,11 +306,13 @@ def build_match_row_prototype_facts(
             cohort.player_id,
             season_start,
             "partial" if cohort.player_id in confirmed_internal else "missing",
-            scope_id,
+            coverage_scope_id,
             source_url,
         )
         for cohort in cohorts
-        for season_start in observation_seasons(cohort.exit_season_start)
+        for season_start in observation_seasons(
+            cohort.exit_season_start, observation_season_count
+        )
     ]
     return PrototypeFacts(appearance_facts, rules, coverage)
 

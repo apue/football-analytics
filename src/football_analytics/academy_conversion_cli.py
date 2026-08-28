@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from .academy_conversion import (
+    RosterMembership,
     build_exit_cohorts,
     calculate_player_outcomes,
     resolve_roster_memberships,
@@ -38,6 +39,7 @@ from .academy_conversion_prototype import (
 )
 from .academy_conversion_report import render_report
 from .academy_roster_parser import parse_roster_blocks
+from .academy_study import AcademyStudyConfig, load_academy_study_config
 from .web_acquisition import (
     AcquisitionError,
     ContentContract,
@@ -63,10 +65,12 @@ def _parser() -> argparse.ArgumentParser:
     health.add_argument("--min-profile-links", type=int, default=0)
 
     manifest = commands.add_parser("manifest")
+    manifest.add_argument("--study-config", type=Path, required=True)
     manifest.add_argument("--config", type=Path, required=True)
     manifest.add_argument("--output", type=Path, required=True)
 
     acquire = commands.add_parser("acquire")
+    acquire.add_argument("--study-config", type=Path, required=True)
     acquire.add_argument("--config", type=Path, required=True)
     acquire.add_argument("--manifest", type=Path, required=True)
     acquire.add_argument("--run-dir", type=Path, required=True)
@@ -75,6 +79,7 @@ def _parser() -> argparse.ArgumentParser:
     acquire.add_argument("--shard-count", type=int, default=1)
 
     validate = commands.add_parser("validate-run")
+    validate.add_argument("--study-config", type=Path, required=True)
     validate.add_argument("--run-dir", type=Path, required=True)
 
     analyze = commands.add_parser("analyze")
@@ -83,9 +88,7 @@ def _parser() -> argparse.ArgumentParser:
     analyze.add_argument("--competitions", type=Path, required=True)
     analyze.add_argument("--coverage", type=Path, required=True)
     analyze.add_argument("--output-dir", type=Path, required=True)
-    analyze.add_argument("--exit-start", type=int, required=True)
-    analyze.add_argument("--exit-end", type=int, required=True)
-    analyze.add_argument("--thresholds", default="10,15,20")
+    analyze.add_argument("--study-config", type=Path, required=True)
 
     resolve = commands.add_parser("resolve-rosters")
     resolve.add_argument("--candidates", type=Path, required=True)
@@ -94,6 +97,7 @@ def _parser() -> argparse.ArgumentParser:
     resolve.add_argument("--validation", type=Path, required=True)
 
     parse_rosters = commands.add_parser("parse-official-rosters")
+    parse_rosters.add_argument("--study-config", type=Path, required=True)
     parse_rosters.add_argument("--config", type=Path, required=True)
     parse_rosters.add_argument("--run-dir", type=Path, required=True)
     parse_rosters.add_argument("--output-dir", type=Path, required=True)
@@ -103,9 +107,8 @@ def _parser() -> argparse.ArgumentParser:
     prototype.add_argument("--links", type=Path, required=True)
     prototype.add_argument("--games", type=Path, required=True)
     prototype.add_argument("--appearances", type=Path, required=True)
-    prototype.add_argument("--competition-policy", type=Path, required=True)
     prototype.add_argument("--output-dir", type=Path, required=True)
-    prototype.add_argument("--source-url", required=True)
+    prototype.add_argument("--study-config", type=Path, required=True)
 
     merge_links = commands.add_parser("merge-source-link-proposals")
     merge_links.add_argument("--base", type=Path, required=True)
@@ -116,11 +119,9 @@ def _parser() -> argparse.ArgumentParser:
     report = commands.add_parser("render-report")
     report.add_argument("--summary", type=Path, required=True)
     report.add_argument("--outcomes", type=Path, required=True)
-    report.add_argument("--rosters", type=Path, required=True)
-    report.add_argument("--output", type=Path, required=True)
-    report.add_argument("--primary-threshold", type=int, default=15)
-    report.add_argument("--appearances", type=Path)
-    report.add_argument("--competition-policy", type=Path)
+    report.add_argument("--appearances", type=Path, required=True)
+    report.add_argument("--competitions", type=Path, required=True)
+    report.add_argument("--study-config", type=Path, required=True)
     return parser
 
 
@@ -178,7 +179,9 @@ def _health(args: argparse.Namespace) -> int:
 
 
 def _manifest(args: argparse.Namespace) -> int:
+    study = _validate_study_paths(args, require_output_within_run=True)
     config = _load_object(args.config)
+    _validate_roster_source_config(config, study)
     pages = config.get("pages")
     if not isinstance(pages, list):
         raise SystemExit("config pages must be a list")
@@ -192,7 +195,9 @@ def _manifest(args: argparse.Namespace) -> int:
 
 
 def _acquire(args: argparse.Namespace) -> int:
+    study = _validate_study_paths(args)
     config = _load_object(args.config)
+    _validate_roster_source_config(config, study)
     policy = config.get("source_policy")
     if not isinstance(policy, Mapping) or policy.get("status") != "approved":
         raise SystemExit("source policy is not approved")
@@ -212,6 +217,9 @@ def _acquire(args: argparse.Namespace) -> int:
     if not isinstance(contracts, Mapping):
         contracts = {}
     rows = [json.loads(line) for line in args.manifest.read_text().splitlines() if line]
+    expected_rows = build_manifest(config["pages"], provider=provider)
+    if rows != expected_rows:
+        raise SystemExit("manifest does not match the frozen roster source config")
     selected = [
         row
         for index, row in enumerate(rows)
@@ -254,6 +262,17 @@ def _acquire(args: argparse.Namespace) -> int:
 
 
 def _validate_run(args: argparse.Namespace) -> int:
+    study = _validate_study_paths(args)
+    config = _load_object(Path(study.roster_source_config_path))
+    _validate_roster_source_config(config, study)
+    manifest_path = args.run_dir / "manifest.jsonl"
+    manifest_rows = [
+        json.loads(line) for line in manifest_path.read_text().splitlines() if line
+    ]
+    expected_manifest = build_manifest(
+        config["pages"], provider=str(config.get("provider", "firecrawl"))
+    )
+    manifest_matches = manifest_rows == expected_manifest
     records_dir = args.run_dir / "records"
     records = (
         [_load_object(path) for path in sorted(records_dir.glob("*.json"))]
@@ -261,11 +280,21 @@ def _validate_run(args: argparse.Namespace) -> int:
         else []
     )
     counts = Counter(str(record.get("status", "invalid")) for record in records)
-    ready = bool(records) and set(counts) == {"complete"}
+    expected_ids = {str(row["item_id"]) for row in expected_manifest}
+    record_ids = {str(record.get("item_id", "")) for record in records}
+    records_match = record_ids == expected_ids and len(records) == len(expected_ids)
+    ready = (
+        bool(records)
+        and manifest_matches
+        and records_match
+        and set(counts) == {"complete"}
+    )
     payload = {
         "run_dir": str(args.run_dir),
         "record_count": len(records),
         "counts": dict(sorted(counts.items())),
+        "manifest_matches_study": manifest_matches,
+        "records_match_manifest": records_match,
         "ready_for_parse": ready,
     }
     validation_path = args.run_dir / "validation.json"
@@ -276,16 +305,33 @@ def _validate_run(args: argparse.Namespace) -> int:
 
 
 def _analyze(args: argparse.Namespace) -> int:
-    thresholds = tuple(int(value) for value in args.thresholds.split(","))
-    if not thresholds or any(value < 1 for value in thresholds):
-        raise SystemExit("thresholds must be positive integers")
+    study = _validate_study_paths(args, require_output_within_run=True)
+    thresholds = study.sensitivity_thresholds
     memberships = load_roster_memberships(args.rosters)
+    _validate_memberships_for_study(memberships, study)
     appearances = load_appearances(args.appearances)
     rules = load_competition_rules(args.competitions)
     coverage = load_coverage(args.coverage)
+    actual_scope_ids = {row.scope_id for row in coverage}
+    if actual_scope_ids != {study.adult_source_scope_id}:
+        raise SystemExit(
+            "coverage facts do not match study adult-source scope: "
+            f"expected={study.adult_source_scope_id}, actual={sorted(actual_scope_ids)}"
+        )
+    study_policy_version, _ = load_competition_policy(
+        Path(study.competition_policy_path)
+    )
+    actual_policy_versions = {row.policy_version for row in rules}
+    if actual_policy_versions != {study_policy_version}:
+        raise SystemExit(
+            "competition facts do not match study policy: "
+            f"expected={study_policy_version}, actual={sorted(actual_policy_versions)}"
+        )
     issues = validate_research_rows(memberships, appearances, rules, coverage)
     cohorts = build_exit_cohorts(
-        memberships, exit_start=args.exit_start, exit_end=args.exit_end
+        memberships,
+        exit_start=study.exit_season_start,
+        exit_end=study.exit_season_end,
     )
     outcomes = []
     summary = []
@@ -296,6 +342,8 @@ def _analyze(args: argparse.Namespace) -> int:
             rules,
             coverage,
             thresholds=thresholds,
+            observation_season_count=study.observation_season_count,
+            sustained_qualifying_seasons=study.sustained_qualifying_seasons,
         )
         summary = summarize_outcomes(outcomes, thresholds=thresholds)
     write_analysis_artifacts(
@@ -316,6 +364,9 @@ def _analyze(args: argparse.Namespace) -> int:
             "appearance_source_urls": sorted({row.source_url for row in appearances}),
             "coverage_source_urls": sorted({row.source_url for row in coverage}),
             "policy_versions": sorted({row.policy_version for row in rules}),
+            "adult_source_scope_id": study.adult_source_scope_id,
+            "study_config": str(args.study_config),
+            "study": study.summary(),
         },
     )
     _emit(
@@ -352,7 +403,9 @@ def _parse_official_rosters(args: argparse.Namespace) -> int:
             "academy-conversion parse-official-rosters ..."
         ) from exc
 
+    study = _validate_study_paths(args, require_output_within_run=True)
     config = _load_object(args.config)
+    _validate_roster_source_config(config, study)
     pages = config.get("pages")
     if not isinstance(pages, list):
         raise SystemExit("config pages must be a list")
@@ -425,24 +478,32 @@ def _parse_official_rosters(args: argparse.Namespace) -> int:
 
 
 def _build_match_row_prototype(args: argparse.Namespace) -> int:
+    study = _validate_study_paths(args, require_output_within_run=True)
     policy_version, competition_policy = load_competition_policy(
-        args.competition_policy
+        Path(study.competition_policy_path)
     )
+    memberships = load_roster_memberships(args.rosters)
+    _validate_memberships_for_study(memberships, study)
     facts = build_match_row_prototype_facts(
-        load_roster_memberships(args.rosters),
+        memberships,
         load_source_player_links(args.links),
         args.games,
         args.appearances,
         competition_policy,
-        source_url=args.source_url,
-        scope_id=policy_version,
+        source_url=study.adult_source_public_url,
+        policy_version=policy_version,
+        coverage_scope_id=study.adult_source_scope_id,
+        exit_start=study.exit_season_start,
+        exit_end=study.exit_season_end,
+        observation_season_count=study.observation_season_count,
     )
     write_prototype_facts(args.output_dir, facts)
     payload = {
         "appearance_rows": len(facts.appearances),
         "competition_rules": len(facts.rules),
         "coverage_rows": len(facts.coverage),
-        "scope_id": policy_version,
+        "policy_version": policy_version,
+        "coverage_scope_id": study.adult_source_scope_id,
     }
     _emit(payload)
     return 0
@@ -474,16 +535,14 @@ def _merge_source_link_proposals(args: argparse.Namespace) -> int:
 
 
 def _render_report(args: argparse.Namespace) -> int:
-    render_report(
+    output = render_report(
         args.summary,
         args.outcomes,
-        args.rosters,
-        args.output,
-        primary_threshold=args.primary_threshold,
-        appearances_path=args.appearances,
-        competition_policy_path=args.competition_policy,
+        args.appearances,
+        args.competitions,
+        args.study_config,
     )
-    _emit({"report": str(args.output)})
+    _emit({"report": str(output)})
     return 0
 
 
@@ -492,6 +551,114 @@ def _load_object(path: Path) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise SystemExit(f"expected JSON object: {path}")
     return value
+
+
+def _validate_study_paths(
+    args: argparse.Namespace, *, require_output_within_run: bool = False
+) -> AcademyStudyConfig:
+    """Prevent acquisition stages from drifting from their frozen study."""
+
+    study = load_academy_study_config(args.study_config, require_approved=True)
+    expected_config = Path(study.roster_source_config_path).resolve()
+    if hasattr(args, "config") and args.config.resolve() != expected_config:
+        raise SystemExit(
+            "roster source config does not match study config: "
+            f"expected={expected_config}, actual={args.config.resolve()}"
+        )
+    expected_run_dir = Path(study.run_dir).resolve()
+    if hasattr(args, "run_dir") and args.run_dir.resolve() != expected_run_dir:
+        raise SystemExit(
+            "run directory does not match study config: "
+            f"expected={expected_run_dir}, actual={args.run_dir.resolve()}"
+        )
+    if hasattr(args, "manifest"):
+        expected_manifest = expected_run_dir / "manifest.jsonl"
+        if args.manifest.resolve() != expected_manifest:
+            raise SystemExit(
+                "manifest path does not match configured run directory: "
+                f"expected={expected_manifest}, actual={args.manifest.resolve()}"
+            )
+    if require_output_within_run and hasattr(args, "output"):
+        expected_manifest = expected_run_dir / "manifest.jsonl"
+        if args.output.resolve() != expected_manifest:
+            raise SystemExit(
+                "manifest output does not match configured run directory: "
+                f"expected={expected_manifest}, actual={args.output.resolve()}"
+            )
+    if require_output_within_run and hasattr(args, "output_dir"):
+        _require_path_within(args.output_dir, expected_run_dir, "output directory")
+    return study
+
+
+def _require_path_within(path: Path, parent: Path, label: str) -> None:
+    try:
+        path.resolve().relative_to(parent)
+    except ValueError as exc:
+        raise SystemExit(f"{label} must be inside configured run directory") from exc
+
+
+def _validate_roster_source_config(
+    config: Mapping[str, Any], study: AcademyStudyConfig
+) -> None:
+    academy_id = str(config.get("academy_id", ""))
+    if academy_id != study.academy_id:
+        raise SystemExit(
+            "roster source academy does not match study config: "
+            f"expected={study.academy_id}, actual={academy_id}"
+        )
+    source_policy = config.get("source_policy")
+    source_status = (
+        str(source_policy.get("status", ""))
+        if isinstance(source_policy, Mapping)
+        else ""
+    )
+    if source_status != study.roster_source_policy_status:
+        raise SystemExit(
+            "roster source policy does not match study config: "
+            f"expected={study.roster_source_policy_status}, actual={source_status}"
+        )
+    pages = config.get("pages")
+    if not isinstance(pages, list):
+        raise SystemExit("config pages must be a list")
+    try:
+        seasons = {int(page["season_start"]) for page in pages}
+    except (KeyError, TypeError, ValueError) as exc:
+        raise SystemExit(
+            "every roster source page needs an integer season_start"
+        ) from exc
+    expected = set(range(study.roster_season_start, study.roster_season_end + 1))
+    if seasons != expected:
+        raise SystemExit(
+            "roster source seasons do not match study config: "
+            f"expected={sorted(expected)}, actual={sorted(seasons)}"
+        )
+
+
+def _validate_memberships_for_study(
+    memberships: Sequence[RosterMembership], study: AcademyStudyConfig
+) -> None:
+    unexpected_academies = sorted(
+        {row.academy_id for row in memberships if row.academy_id != study.academy_id}
+    )
+    if unexpected_academies:
+        raise SystemExit(
+            "roster facts do not match study academy: "
+            f"expected={study.academy_id}, actual={unexpected_academies}"
+        )
+    out_of_window = sorted(
+        {
+            row.season_start
+            for row in memberships
+            if not study.roster_season_start
+            <= row.season_start
+            <= study.roster_season_end
+        }
+    )
+    if out_of_window:
+        raise SystemExit(
+            "roster facts fall outside configured roster seasons: "
+            f"actual={out_of_window}"
+        )
 
 
 def _safe_error(exc: Exception) -> str:
