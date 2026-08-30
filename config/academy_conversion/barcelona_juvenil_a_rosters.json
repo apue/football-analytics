@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "academy_id": "fc-barcelona-juvenil-a",
+  "source_policy": {
+    "status": "approved",
+    "reviewed_at": "2026-08-27",
+    "record": "docs/sources/academy-conversion.md"
+  },
+  "exit_cohort": {
+    "start_season": 2015,
+    "end_season": 2019,
+    "observation_seasons": 5,
+    "thresholds": [10, 15, 20],
+    "primary_threshold": 15
+  },
+  "contracts": {
+    "annual_report": {
+      "content_types": ["application/pdf"],
+      "magic_prefix": "%PDF",
+      "tail_marker": "%%EOF",
+      "min_bytes": 100000
+    }
+  },
+  "pages": [
+    {
+      "page_type": "annual_report",
+      "filename": "2015-16.pdf",
+      "season_start": 2015,
+      "roster_page": 32,
+      "expected_player_count": 25,
+      "visual_review": {"status": "confirmed", "reviewed_at": "2026-08-27"},
+      "url": "https://platform-static-files.s3.amazonaws.com/HawkEye/document/2018/08/23/3441fdf7-2b6c-46ff-a42b-c3e252f49b4d/ES_2015-16.pdf"
+    },
+    {
+      "page_type": "annual_report",
+      "filename": "2016-17.pdf",
+      "season_start": 2016,
+      "roster_page": 25,
+      "expected_player_count": 26,
+      "visual_review": {"status": "confirmed", "reviewed_at": "2026-08-27"},
+      "url": "https://platform-static-files.s3.amazonaws.com/HawkEye/document/2018/08/23/3a14b3f8-b2e5-4402-872b-afec1de10069/ES_2016-17.pdf"
+    },
+    {
+      "page_type": "annual_report",
+      "filename": "2017-18.pdf",
+      "season_start": 2017,
+      "roster_page": 28,
+      "expected_player_count": 22,
+      "visual_review": {"status": "confirmed", "reviewed_at": "2026-08-27"},
+      "url": "https://fcbarcelona-static-files.s3.amazonaws.com/fcbarcelona/document/2019/01/09/a7e30fb3-19e4-4bb6-8a78-1b957bb25065/MEMORIA_CLUB_2017_18_CAS-opti.pdf"
+    },
+    {
+      "page_type": "annual_report",
+      "filename": "2018-19.pdf",
+      "season_start": 2018,
+      "roster_page": 26,
+      "expected_player_count": 22,
+      "visual_review": {"status": "confirmed", "reviewed_at": "2026-08-27"},
+      "url": "https://www.fcbarcelona.com/fcbarcelona/document/2023/04/20/79a988b5-947f-41fe-a919-a78fca48937c/Memoria-2018-19_CAS.pdf"
+    },
+    {
+      "page_type": "annual_report",
+      "filename": "2019-20.pdf",
+      "season_start": 2019,
+      "roster_page": 22,
+      "expected_player_count": 23,
+      "visual_review": {"status": "confirmed", "reviewed_at": "2026-08-27"},
+      "url": "https://www.fcbarcelona.com/fcbarcelona/document/2023/04/20/3b2d1060-c9ca-4f4f-8938-eb4ee512b939/Memoria-2019-20_CAS.pdf"
+    },
+    {
+      "page_type": "annual_report",
+      "filename": "2020-21.pdf",
+      "season_start": 2020,
+      "roster_page": 22,
+      "expected_player_count": 20,
+      "visual_review": {"status": "confirmed", "reviewed_at": "2026-08-27"},
+      "url": "https://www.fcbarcelona.com/fcbarcelona/document/2023/04/20/70198a05-dc98-46b5-b8e5-2f0f3b608ae3/Memoria-2020-21_CAS.pdf"
+    },
+    {
+      "page_type": "annual_report",
+      "filename": "2021-22.pdf",
+      "season_start": 2021,
+      "roster_page": 29,
+      "expected_player_count": 25,
+      "visual_review": {"status": "confirmed", "reviewed_at": "2026-08-27"},
+      "url": "https://www.fcbarcelona.com/fcbarcelona/document/2023/04/20/684273e2-8fb0-4d8f-a208-f7935d22ae16/Memoria-2021-22_CAS.pdf"
+    }
+  ]
+}

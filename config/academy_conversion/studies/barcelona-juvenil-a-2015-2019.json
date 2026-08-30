@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "study_id": "barcelona-juvenil-a-2015-2019",
+  "academy": {
+    "academy_id": "fc-barcelona-juvenil-a",
+    "display_name": "拉玛西亚",
+    "squad_name": "Juvenil A"
+  },
+  "cohorts": {
+    "roster_season_start": 2015,
+    "roster_season_end": 2021,
+    "exit_season_start": 2015,
+    "exit_season_end": 2019,
+    "observation_season_count": 5
+  },
+  "outcomes": {
+    "primary_appearance_threshold": 15,
+    "sensitivity_thresholds": [10, 15, 20],
+    "sustained_qualifying_seasons": 2,
+    "competition_policy_path": "config/academy_conversion/competition_policy_v1.json"
+  },
+  "roster_source": {
+    "config_path": "config/academy_conversion/barcelona_juvenil_a_rosters.json",
+    "policy_status": "approved",
+    "public_url": "https://www.fcbarcelona.com/en/club/organisation-and-strategic-plan/commissions-and-bodies/annual-reports"
+  },
+  "adult_source": {
+    "scope_id": "public-career-v1-partial",
+    "policy_status": "approved",
+    "public_url": "https://github.com/dcaribou/transfermarkt-datasets",
+    "coverage_note": "当前公开派生数据主要覆盖各国顶级联赛，缺少英冠、意丙等职业次级联赛，且部分球员身份尚未链接；所有比例均为已确认正例的保守下界。"
+  },
+  "outputs": {
+    "run_dir": "data/processed/academy-conversion/runs/barcelona-v1",
+    "report_path": "data/processed/academy-conversion/runs/barcelona-v1/report/index.html",
+    "language": "zh-CN"
+  }
+}

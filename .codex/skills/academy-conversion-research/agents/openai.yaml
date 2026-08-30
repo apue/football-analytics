@@ -1,0 +1,4 @@
+interface:
+  display_name: "Academy Conversion Research"
+  short_description: "Run evidence-aware academy-to-senior conversion studies."
+  default_prompt: "Research an academy cohort from approved evidence and deterministic career facts."

@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "queries": [
+    {"id": "season-2015", "query": "FC Barcelona memoria 2015 2016 filetype:pdf"},
+    {"id": "season-2016", "query": "FC Barcelona memoria 2016 2017 filetype:pdf"},
+    {"id": "season-2017", "query": "FC Barcelona memoria 2017 2018 filetype:pdf"},
+    {"id": "season-2018", "query": "FC Barcelona memoria 2018 2019 filetype:pdf"},
+    {"id": "season-2019", "query": "FC Barcelona memoria 2019 2020 filetype:pdf"},
+    {"id": "season-2020", "query": "FC Barcelona memoria 2020 2021 filetype:pdf"},
+    {"id": "season-2021", "query": "FC Barcelona memoria 2021 2022 filetype:pdf"}
+  ],
+  "limit": 20,
+  "country": "ES",
+  "allowed_domains": [
+    "fcbarcelona.com",
+    "fcbarcelona-static-files.s3.amazonaws.com",
+    "platform-static-files.s3.amazonaws.com"
+  ],
+  "require_pdf": true,
+  "required_url_terms": ["memoria"]
+}
