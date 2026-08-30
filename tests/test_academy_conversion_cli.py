@@ -1,4 +1,5 @@
 import json
+from urllib.error import HTTPError
 
 import pytest
 
@@ -9,6 +10,18 @@ from football_analytics.academy_conversion_cli import main
 def _write_study(path, output_dir, *, roster_config=None, academy_id="academy-u19"):
     if roster_config is None:
         roster_config = output_dir.parent / "roster-source.json"
+        roster_config.write_text(
+            json.dumps(
+                {
+                    "academy_id": academy_id,
+                    "source_policy": {"status": "approved"},
+                    "pages": [
+                        {"season_start": season, "expected_player_count": 1}
+                        for season in (2019, 2020, 2021)
+                    ],
+                }
+            )
+        )
     policy = output_dir.parent / "policy.json"
     policy.parent.mkdir(parents=True, exist_ok=True)
     policy.write_text(
@@ -162,6 +175,41 @@ def test_health_stops_at_failed_target_page_gate(tmp_path, monkeypatch, capsys):
         "parser": "not_checked",
     }
     assert emitted["error"] == "target_status=405"
+
+
+def test_health_classifies_firecrawl_http_error_above_target_gate(
+    tmp_path, monkeypatch, capsys
+):
+    class StubClient:
+        def __init__(self, _config):
+            pass
+
+        def scrape(self, url):
+            raise HTTPError(url, 401, "Unauthorized", {}, None)
+
+    monkeypatch.setattr(academy_cli, "load_keypool_config", lambda _path: object())
+    monkeypatch.setattr(academy_cli, "FirecrawlClient", StubClient)
+
+    exit_code = main(
+        [
+            "health",
+            "--env-file",
+            str(tmp_path / ".env"),
+            "--url",
+            "https://example.test/roster",
+        ]
+    )
+
+    emitted = json.loads(capsys.readouterr().out)
+    assert exit_code == 2
+    assert emitted["checks"] == {
+        "keypool": "passed",
+        "transport": "passed",
+        "firecrawl": "failed",
+        "target_page": "not_checked",
+        "content": "not_checked",
+        "parser": "not_checked",
+    }
 
 
 def test_health_reports_parser_probe_failure(tmp_path, monkeypatch, capsys):
@@ -395,6 +443,103 @@ def test_acquire_downloads_approved_http_file(tmp_path, monkeypatch, capsys):
         )
 
 
+def test_acquire_runs_and_persists_firecrawl_batch_workflow(
+    tmp_path, monkeypatch, capsys
+):
+    config_path = tmp_path / "config.json"
+    run_dir = tmp_path / "run"
+    manifest = run_dir / "manifest.jsonl"
+    study = tmp_path / "study.json"
+    _write_acquisition_study(study, config_path, run_dir)
+    pages = [
+        {
+            "url": f"https://example.test/{season}",
+            "page_type": "roster",
+            "season_start": season,
+        }
+        for season in (2019, 2020, 2021)
+    ]
+    config_path.write_text(
+        json.dumps(
+            {
+                "provider": "firecrawl",
+                "batch": {"enabled": True, "max_concurrency": 2},
+                "academy_id": "academy-u19",
+                "source_policy": {"status": "approved"},
+                "contracts": {"roster": {"required_text": ["Academy"]}},
+                "pages": pages,
+            }
+        )
+    )
+    assert (
+        main(
+            [
+                "manifest",
+                "--study-config",
+                str(study),
+                "--config",
+                str(config_path),
+                "--output",
+                str(manifest),
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+
+    class StubClient:
+        def __init__(self, _config):
+            pass
+
+        def start_batch_job(self, urls, *, formats, max_concurrency):
+            assert list(urls) == [page["url"] for page in pages]
+            assert max_concurrency == 2
+            return {"success": True, "id": "job-123"}
+
+        def batch_status(self, _job_id):
+            return {
+                "success": True,
+                "status": "completed",
+                "data": [
+                    {
+                        "markdown": f"Academy {page['season_start']}",
+                        "metadata": {"sourceURL": page["url"], "statusCode": 200},
+                    }
+                    for page in pages
+                ],
+            }
+
+    monkeypatch.setattr(academy_cli, "load_keypool_config", lambda _path: object())
+    monkeypatch.setattr(academy_cli, "FirecrawlClient", StubClient)
+
+    exit_code = main(
+        [
+            "acquire",
+            "--study-config",
+            str(study),
+            "--config",
+            str(config_path),
+            "--manifest",
+            str(manifest),
+            "--run-dir",
+            str(run_dir),
+            "--env-file",
+            str(tmp_path / ".env"),
+        ]
+    )
+
+    emitted = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert emitted["counts"] == {"complete": 3}
+    assert emitted["batch"] == {
+        "attempt": 1,
+        "job_id": "job-123",
+        "status": "completed",
+    }
+    assert len(list((run_dir / "records").glob("*.json"))) == 3
+    assert len(list((run_dir / "batches").glob("*.json"))) == 1
+
+
 def test_validate_run_reports_record_states(tmp_path, capsys):
     config = tmp_path / "source.json"
     study = tmp_path / "study.json"
@@ -597,6 +742,63 @@ def test_analyze_rejects_missing_boundary_roster_seasons(tmp_path):
     with pytest.raises(
         SystemExit,
         match=r"roster facts do not cover configured seasons: missing=\[2020, 2021\]",
+    ):
+        main(
+            [
+                "analyze",
+                "--rosters",
+                str(rosters),
+                "--appearances",
+                str(appearances),
+                "--competitions",
+                str(competitions),
+                "--coverage",
+                str(coverage),
+                "--output-dir",
+                str(output_dir),
+                "--study-config",
+                str(study),
+            ]
+        )
+
+
+def test_analyze_rejects_incomplete_boundary_roster_season(tmp_path):
+    rosters = tmp_path / "rosters.csv"
+    appearances = tmp_path / "appearances.csv"
+    competitions = tmp_path / "competitions.csv"
+    coverage = tmp_path / "coverage.csv"
+    output_dir = tmp_path / "analysis"
+    study = tmp_path / "study.json"
+    _write_study(study, output_dir)
+    roster_config = output_dir.parent / "roster-source.json"
+    config = json.loads(roster_config.read_text())
+    config["pages"][1]["expected_player_count"] = 2
+    roster_config.write_text(json.dumps(config))
+    rosters.write_text(
+        "player_id,player_name,academy_id,season_start,source_url\n"
+        "p1,Player One,academy-u19,2019,official-report\n"
+        "p2,Boundary Player,academy-u19,2020,official-report\n"
+        "p3,Later Boundary,academy-u19,2021,official-report\n"
+    )
+    appearances.write_text(
+        "player_id,season_start,club_id,competition_id,appearances,source_url\n"
+    )
+    competitions.write_text(
+        "competition_id,season_start,tier,tier_rank,"
+        "eligible_domestic_league,policy_version\n"
+        "es1,2020,T0,0,true,v1\n"
+    )
+    coverage.write_text(
+        "player_id,season_start,status,scope_id,source_url\n"
+        "p1,2020,complete,complete-v1,official-stats\n"
+    )
+
+    with pytest.raises(
+        SystemExit,
+        match=(
+            r"roster fact count does not match source contract: "
+            r"season=2020 actual=1 expected=2"
+        ),
     ):
         main(
             [

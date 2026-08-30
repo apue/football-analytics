@@ -10,6 +10,7 @@ from football_analytics.web_acquisition import (
     FirecrawlClient,
     FirecrawlDocumentError,
     KeyPoolConfig,
+    acquire_firecrawl_batch,
     acquire_firecrawl_item,
     acquire_http_file_item,
     build_manifest,
@@ -140,6 +141,154 @@ def test_firecrawl_client_supports_batch_start_and_status():
     assert calls[1][2] is None
 
 
+def test_firecrawl_batch_is_persisted_resumable_and_validates_each_item(tmp_path):
+    class StubClient:
+        def __init__(self):
+            self.starts = 0
+            self.polls = 0
+
+        def start_batch_job(self, urls, *, formats, max_concurrency):
+            self.starts += 1
+            assert list(urls) == [
+                "https://example.test/a",
+                "https://example.test/b",
+            ]
+            assert max_concurrency == 2
+            return {"success": True, "id": "job-123"}
+
+        def batch_status(self, job_id):
+            self.polls += 1
+            assert job_id == "job-123"
+            if self.polls == 1:
+                return {"success": True, "status": "processing", "completed": 0}
+            return {
+                "success": True,
+                "status": "completed",
+                "creditsUsed": 2,
+                "data": [
+                    {
+                        "markdown": "Academy A",
+                        "metadata": {
+                            "sourceURL": "https://example.test/a",
+                            "statusCode": 200,
+                        },
+                    },
+                    {
+                        "markdown": "Academy B",
+                        "metadata": {
+                            "sourceURL": "https://example.test/b",
+                            "statusCode": 200,
+                        },
+                    },
+                ],
+            }
+
+    client = StubClient()
+    items = [
+        {
+            "item_id": "a",
+            "url": "https://example.test/a",
+            "provider": "firecrawl",
+        },
+        {
+            "item_id": "b",
+            "url": "https://example.test/b",
+            "provider": "firecrawl",
+        },
+    ]
+    contracts = {
+        "a": ContentContract(required_text=("Academy A",)),
+        "b": ContentContract(required_text=("Academy B",)),
+    }
+
+    processing = acquire_firecrawl_batch(
+        client, items, tmp_path, contracts, max_concurrency=2
+    )
+    completed = acquire_firecrawl_batch(
+        client, items, tmp_path, contracts, max_concurrency=2
+    )
+    cached = acquire_firecrawl_batch(
+        client, items, tmp_path, contracts, max_concurrency=2
+    )
+
+    assert processing.status == "processing"
+    assert processing.results == ()
+    assert completed.status == "completed"
+    assert [result.status for result in completed.results] == ["complete", "complete"]
+    assert cached.status == "completed"
+    assert all(result.cache_state == "hit" for result in cached.results)
+    assert client.starts == 1
+    assert client.polls == 2
+    job = json.loads(next((tmp_path / "batches").glob("*.json")).read_text())
+    assert job["status"] == "completed"
+    assert job["attempt"] == 1
+    assert job["cost"] == 2.0
+    raw_paths = sorted((tmp_path / "raw/firecrawl-batch").rglob("*.json"))
+    assert len(raw_paths) == 3
+    assert (tmp_path / "records/a.json").exists()
+    assert (tmp_path / "records/b.json").exists()
+
+
+def test_firecrawl_batch_failure_writes_per_item_failure_records(tmp_path):
+    class StubClient:
+        def start_batch_job(self, urls, *, formats, max_concurrency):
+            return {"success": True, "id": "job-failed"}
+
+        def batch_status(self, _job_id):
+            return {"success": False, "status": "failed", "error": "quota"}
+
+    items = [
+        {
+            "item_id": "a",
+            "url": "https://example.test/a",
+            "provider": "firecrawl",
+        }
+    ]
+
+    failed = acquire_firecrawl_batch(
+        StubClient(), items, tmp_path, {"a": ContentContract()}
+    )
+    cached = acquire_firecrawl_batch(
+        StubClient(), items, tmp_path, {"a": ContentContract()}
+    )
+
+    assert failed.status == "failed"
+    assert len(failed.results) == 1
+    assert failed.results[0].status == "validation_failed"
+    assert failed.results[0].provider_status == "failed"
+    assert failed.results[0].error_classification == "provider_response"
+    assert cached.status == "completed"
+    assert cached.results[0].cache_state == "hit"
+    assert (tmp_path / "records/a.json").exists()
+
+
+def test_firecrawl_batch_start_http_error_writes_provider_failure_records(tmp_path):
+    class StubClient:
+        def start_batch_job(self, urls, *, formats, max_concurrency):
+            raise HTTPError("https://keypool.test/batch", 401, "Unauthorized", {}, None)
+
+    items = [
+        {
+            "item_id": "a",
+            "url": "https://example.test/a",
+            "provider": "firecrawl",
+        }
+    ]
+
+    failed = acquire_firecrawl_batch(
+        StubClient(), items, tmp_path, {"a": ContentContract()}
+    )
+
+    assert failed.status == "failed"
+    assert failed.job_id is None
+    assert failed.results[0].status == "validation_failed"
+    assert failed.results[0].provider_status == "failed"
+    assert failed.results[0].target_status is None
+    assert failed.results[0].error_classification == "provider_permanent"
+    assert (tmp_path / "records/a.json").exists()
+    assert next((tmp_path / "batches").glob("*.json")).exists()
+
+
 def test_firecrawl_permanent_target_failure_is_cached_without_retry(tmp_path):
     responses = [
         {
@@ -206,6 +355,36 @@ def test_firecrawl_transport_failure_is_persisted_as_retryable(tmp_path):
     assert json.loads((tmp_path / "records/timeout.json").read_text())["status"] == (
         "retryable_failed"
     )
+
+
+def test_firecrawl_http_401_is_a_cached_provider_failure(tmp_path):
+    calls = []
+
+    class UnauthorizedClient:
+        def scrape(self, url, *, formats):
+            calls.append(url)
+            raise HTTPError(url, 401, "Unauthorized", {}, None)
+
+    item = {
+        "item_id": "unauthorized",
+        "url": "https://example.test/roster",
+        "provider": "firecrawl",
+    }
+
+    failed = acquire_firecrawl_item(
+        UnauthorizedClient(), item, tmp_path, ContentContract()
+    )
+    cached = acquire_firecrawl_item(
+        UnauthorizedClient(), item, tmp_path, ContentContract()
+    )
+
+    assert failed.status == "validation_failed"
+    assert failed.transport_status == "passed"
+    assert failed.provider_status == "failed"
+    assert failed.target_status is None
+    assert failed.error_classification == "provider_permanent"
+    assert cached.cache_state == "hit"
+    assert calls == ["https://example.test/roster"]
 
 
 def test_firecrawl_success_records_provider_cost_and_envelope(tmp_path):

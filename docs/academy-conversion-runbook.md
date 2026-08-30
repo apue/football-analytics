@@ -58,6 +58,22 @@ Acquisition records distinguish transport, provider, target, content, cache,
 and error-classification states. Completed records and permanent target/content
 failures are reused without another request. Only transient transport failures,
 HTTP 408/429, and 5xx target failures are eligible for a later bounded retry.
+Firecrawl service HTTP failures remain provider failures; they are never stored
+as the target page's status.
+
+For an approved Firecrawl source, add the following frozen source configuration
+to use the auditable batch workflow:
+
+```json
+{"batch": {"enabled": true, "max_concurrency": 2}}
+```
+
+The first `acquire` invocation persists the start response and one status poll.
+If the provider still reports `queued` or `processing`, rerun the same command;
+it resumes the stored job instead of starting another one. A completed response
+is preserved, mapped back to manifest URLs, and passed through the same target
+and content contracts as single-page acquisition. Per-item records remain the
+input to `validate-run`.
 
 Roster candidates do not become denominator facts until a reviewed identity
 table passes `resolve-rosters`. Worker alias proposals are merged only through
@@ -78,11 +94,11 @@ uv run academy-conversion analyze \
   --output-dir <analysis-output>
 ```
 
-The roster membership input must contain at least one reviewed membership for
-every configured roster season, including the post-cohort boundary seasons.
-Analysis stops before cohort construction when a configured season is absent;
-otherwise a continuing youth player could be silently misclassified as an
-exit.
+The roster membership input must match each season's
+`expected_player_count` from the frozen roster source configuration, including
+the post-cohort boundary seasons. Analysis stops before cohort construction
+when any season is absent or truncated; otherwise an omitted continuing youth
+player could be silently misclassified as an exit.
 
 Render the local report only from validated analysis artifacts:
 

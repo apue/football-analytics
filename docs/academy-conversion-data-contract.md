@@ -20,6 +20,12 @@ and 5xx target responses. Permanent 4xx, provider-response failures, and
 content-contract failures require operator investigation rather than automatic
 retries.
 
+Firecrawl batch mode persists the untouched start and status responses under
+`raw/firecrawl-batch/`, plus a resumable job record under `batches/`. A later
+invocation resumes a queued or processing job. Completed documents are mapped
+to their manifest URLs and then written through the same per-item envelope and
+content validation used by single-page acquisition.
+
 ## Roster identity boundary
 
 Official academy sources often publish names without stable person IDs. A
@@ -85,9 +91,9 @@ An absent coverage row is also unknown.
 Acquisition, roster parsing, fact construction, analysis, and rendering load the
 same study config. Commands reject a different academy, roster-season window,
 source config, run directory, or output path outside that run directory.
-The analysis gate also requires roster memberships to cover every configured
-roster season, including later boundary-audit seasons, before building exit
-cohorts.
+The analysis gate also requires each roster season's membership count to equal
+the frozen source page `expected_player_count`, including later boundary-audit
+seasons, before building exit cohorts.
 
 ## Analysis outputs
 

@@ -82,6 +82,16 @@ class AcquisitionResult:
     error: str | None
 
 
+@dataclass(frozen=True)
+class BatchAcquisitionResult:
+    """Resumable state and item results for one Firecrawl batch."""
+
+    status: str
+    job_id: str | None
+    attempt: int
+    results: tuple[AcquisitionResult, ...]
+
+
 RequestJson = Callable[
     [str, str, Mapping[str, str], Mapping[str, Any] | None], Mapping[str, Any]
 ]
@@ -129,6 +139,22 @@ class FirecrawlClient:
     ) -> str:
         """Start an asynchronous Firecrawl batch for known URLs."""
 
+        response = self.start_batch_job(
+            urls,
+            formats=formats,
+            max_concurrency=max_concurrency,
+        )
+        return str(response["id"])
+
+    def start_batch_job(
+        self,
+        urls: Iterable[str],
+        *,
+        formats: tuple[str, ...] = ("rawHtml", "markdown"),
+        max_concurrency: int | None = None,
+    ) -> Mapping[str, Any]:
+        """Start a batch and return its unmodified auditable response."""
+
         payload: dict[str, Any] = {
             "urls": list(urls),
             "formats": list(formats),
@@ -145,7 +171,7 @@ class FirecrawlClient:
         job_id = response.get("id")
         if response.get("success") is not True or not isinstance(job_id, str):
             raise AcquisitionError("Firecrawl batch did not return a job id")
-        return job_id
+        return response
 
     def batch_status(self, job_id: str) -> Mapping[str, Any]:
         """Read one batch status page through the same KeyPool route."""
@@ -249,6 +275,225 @@ def build_manifest(
     return rows
 
 
+def acquire_firecrawl_batch(
+    client: Any,
+    items: Iterable[Mapping[str, Any]],
+    run_dir: Path,
+    contracts: Mapping[str, ContentContract],
+    *,
+    max_concurrency: int | None = None,
+) -> BatchAcquisitionResult:
+    """Start or resume one batch and validate every completed target item."""
+
+    item_rows = list(items)
+    cached_by_id: dict[str, AcquisitionResult] = {}
+    pending = []
+    for item in item_rows:
+        item_id = str(item["item_id"])
+        record_path = run_dir / "records" / f"{item_id}.json"
+        if record_path.exists():
+            existing = _result_from_record(
+                record_path, json.loads(record_path.read_text())
+            )
+            if existing.status != "retryable_failed":
+                cached_by_id[item_id] = replace(existing, cache_state="hit")
+                continue
+        pending.append(item)
+
+    if not pending:
+        return BatchAcquisitionResult(
+            "completed",
+            None,
+            0,
+            tuple(cached_by_id[str(item["item_id"])] for item in item_rows),
+        )
+
+    fingerprint = hashlib.sha256(
+        "\0".join(sorted(str(item["item_id"]) for item in pending)).encode()
+    ).hexdigest()[:20]
+    job_path = run_dir / "batches" / f"{fingerprint}.json"
+    previous = json.loads(job_path.read_text()) if job_path.exists() else {}
+    active = previous.get("status") in {"queued", "processing"}
+    attempt = (
+        int(previous.get("attempt", 0))
+        if active
+        else int(previous.get("attempt", 0)) + 1
+    )
+    raw_dir = run_dir / "raw" / "firecrawl-batch" / fingerprint
+    job_raw_paths = list(previous.get("raw_paths", []))
+
+    def persist_batch_exception(
+        exc: Exception, stage: str, current_job_id: str | None
+    ) -> BatchAcquisitionResult:
+        retrieved_at = datetime.now(UTC).isoformat()
+        error_path = raw_dir / f"attempt-{attempt:03d}-{stage}.error.json"
+        results = []
+        for item in pending:
+            item_id = str(item["item_id"])
+            result = _transport_failure(
+                item_id,
+                str(item["url"]),
+                str(item.get("provider", "firecrawl")),
+                attempt,
+                retrieved_at,
+                error_path,
+                exc,
+                http_error_layer="provider",
+            )
+            record_path = run_dir / "records" / f"{item_id}.json"
+            _write_json(record_path, _result_record(result, record_path))
+            results.append(result)
+        classification = results[0].error_classification if results else None
+        _write_json(
+            error_path,
+            {
+                "error_type": type(exc).__name__,
+                "classification": classification,
+            },
+        )
+        failure_raw_paths = list(job_raw_paths)
+        failure_raw_paths.append(str(error_path.relative_to(run_dir)))
+        _write_json(
+            job_path,
+            {
+                "job_id": current_job_id,
+                "status": "failed",
+                "attempt": attempt,
+                "item_ids": [str(item["item_id"]) for item in pending],
+                "urls": [str(item["url"]) for item in pending],
+                "started_at": retrieved_at,
+                "raw_paths": failure_raw_paths,
+                "cost": None,
+                "error_classification": classification,
+            },
+        )
+        return BatchAcquisitionResult("failed", current_job_id, attempt, tuple(results))
+
+    if active:
+        job_id = str(previous["job_id"])
+        job = dict(previous)
+    else:
+        try:
+            start_payload = client.start_batch_job(
+                [str(item["url"]) for item in pending],
+                formats=("rawHtml", "markdown"),
+                max_concurrency=max_concurrency,
+            )
+        except Exception as exc:
+            return persist_batch_exception(exc, "start", None)
+        job_id = str(start_payload["id"])
+        start_path = raw_dir / f"attempt-{attempt:03d}-start.json"
+        _write_json(start_path, start_payload)
+        job_raw_paths = [str(start_path.relative_to(run_dir))]
+        job = {
+            "job_id": job_id,
+            "status": "queued",
+            "attempt": attempt,
+            "item_ids": [str(item["item_id"]) for item in pending],
+            "urls": [str(item["url"]) for item in pending],
+            "started_at": datetime.now(UTC).isoformat(),
+            "raw_paths": job_raw_paths,
+            "cost": None,
+        }
+        _write_json(job_path, job)
+
+    try:
+        status_payload = client.batch_status(job_id)
+    except Exception as exc:
+        return persist_batch_exception(exc, "status", job_id)
+    poll = len(list(raw_dir.glob(f"attempt-{attempt:03d}-status-*.json"))) + 1
+    status_path = raw_dir / f"attempt-{attempt:03d}-status-{poll:03d}.json"
+    _write_json(status_path, status_payload)
+    status = str(status_payload.get("status", "failed"))
+    raw_paths = list(job.get("raw_paths", []))
+    raw_paths.append(str(status_path.relative_to(run_dir)))
+    job.update(
+        {
+            "status": status,
+            "raw_paths": raw_paths,
+            "cost": _provider_cost(status_payload),
+        }
+    )
+    _write_json(job_path, job)
+
+    class PayloadClient:
+        def __init__(self, value: Mapping[str, Any]) -> None:
+            self.value = value
+
+        def scrape(self, _url: str, *, formats: tuple[str, ...]) -> Mapping[str, Any]:
+            return self.value
+
+    if status != "completed":
+        if status in {"queued", "processing"}:
+            return BatchAcquisitionResult(
+                status,
+                job_id,
+                attempt,
+                tuple(
+                    cached_by_id[str(item["item_id"])]
+                    for item in item_rows
+                    if str(item["item_id"]) in cached_by_id
+                ),
+            )
+        failed_results = dict(cached_by_id)
+        failure_payload = {
+            "success": False,
+            "error": f"batch_status={status}",
+        }
+        for item in pending:
+            item_id = str(item["item_id"])
+            failed_results[item_id] = acquire_firecrawl_item(
+                PayloadClient(failure_payload),
+                item,
+                run_dir,
+                contracts.get(item_id, ContentContract()),
+            )
+        return BatchAcquisitionResult(
+            status,
+            job_id,
+            attempt,
+            tuple(failed_results[str(item["item_id"])] for item in item_rows),
+        )
+
+    documents = status_payload.get("data")
+    if not isinstance(documents, list):
+        documents = []
+    documents_by_url = {}
+    for document in documents:
+        if not isinstance(document, Mapping):
+            continue
+        metadata = document.get("metadata")
+        if not isinstance(metadata, Mapping):
+            continue
+        source_url = metadata.get("sourceURL", metadata.get("url"))
+        if isinstance(source_url, str):
+            documents_by_url[source_url] = document
+
+    results_by_id = dict(cached_by_id)
+
+    for item in pending:
+        item_id = str(item["item_id"])
+        document = documents_by_url.get(str(item["url"]))
+        payload: Mapping[str, Any]
+        if document is None:
+            payload = {"success": False, "error": "batch_result_missing"}
+        else:
+            payload = {"success": True, "data": document}
+
+        results_by_id[item_id] = acquire_firecrawl_item(
+            PayloadClient(payload),
+            item,
+            run_dir,
+            contracts.get(item_id, ContentContract()),
+        )
+    return BatchAcquisitionResult(
+        status,
+        job_id,
+        attempt,
+        tuple(results_by_id[str(item["item_id"])] for item in item_rows),
+    )
+
+
 def acquire_firecrawl_item(
     client: Any,
     item: Mapping[str, Any],
@@ -275,7 +520,14 @@ def acquire_firecrawl_item(
     except Exception as exc:
         error_path = attempt_dir / f"attempt-{attempt:03d}.error.json"
         result = _transport_failure(
-            item_id, url, provider, attempt, retrieved_at, error_path, exc
+            item_id,
+            url,
+            provider,
+            attempt,
+            retrieved_at,
+            error_path,
+            exc,
+            http_error_layer="provider",
         )
         _write_json(
             error_path,
@@ -367,7 +619,14 @@ def acquire_http_file_item(
     except Exception as exc:
         error_path = attempt_dir / f"attempt-{attempt:03d}.error.json"
         result = _transport_failure(
-            item_id, url, provider, attempt, retrieved_at, error_path, exc
+            item_id,
+            url,
+            provider,
+            attempt,
+            retrieved_at,
+            error_path,
+            exc,
+            http_error_layer="target",
         )
         _write_json(
             error_path,
@@ -509,24 +768,36 @@ def _transport_failure(
     retrieved_at: str,
     raw_path: Path,
     exc: Exception,
+    *,
+    http_error_layer: str,
 ) -> AcquisitionResult:
     target_status = exc.code if isinstance(exc, HTTPError) else None
-    error_classification = (
-        _target_error_classification(target_status)
-        if target_status is not None
-        else "transport_transient"
-    )
+    if target_status is None:
+        error_classification = "transport_transient"
+        provider_status = "not_checked"
+    elif http_error_layer == "provider":
+        error_classification = (
+            "provider_transient"
+            if target_status in {408, 429} or target_status >= 500
+            else "provider_permanent"
+        )
+        provider_status = "failed"
+        target_status = None
+    else:
+        error_classification = _target_error_classification(target_status)
+        provider_status = "passed"
     return AcquisitionResult(
         item_id=item_id,
         url=url,
         provider=provider,
         status=(
             "retryable_failed"
-            if error_classification in {"target_transient", "transport_transient"}
+            if error_classification
+            in {"target_transient", "provider_transient", "transport_transient"}
             else "validation_failed"
         ),
-        transport_status="passed" if target_status is not None else "failed",
-        provider_status="passed" if target_status is not None else "not_checked",
+        transport_status=("passed" if isinstance(exc, HTTPError) else "failed"),
+        provider_status=provider_status,
         cache_state="miss",
         attempt=attempt,
         retrieved_at=retrieved_at,

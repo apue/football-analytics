@@ -8,6 +8,7 @@ from collections import Counter
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
+from urllib.error import HTTPError
 
 from .academy_conversion import (
     RosterMembership,
@@ -45,6 +46,7 @@ from .web_acquisition import (
     ContentContract,
     FileContract,
     FirecrawlClient,
+    acquire_firecrawl_batch,
     acquire_firecrawl_item,
     acquire_http_file_item,
     build_manifest,
@@ -178,6 +180,9 @@ def _health(args: argparse.Namespace) -> int:
 
     try:
         payload = FirecrawlClient(config).scrape(args.url)
+    except HTTPError as exc:
+        checks["transport"] = "passed"
+        return fail("firecrawl", exc)
     except Exception as exc:
         return fail("transport", exc)
     checks["transport"] = "passed"
@@ -281,6 +286,53 @@ def _acquire(args: argparse.Namespace) -> int:
         if index % args.shard_count == args.shard_index
     ]
     counts: Counter[str] = Counter()
+    batch_config = config.get("batch")
+    if (
+        provider == "firecrawl"
+        and isinstance(batch_config, Mapping)
+        and batch_config.get("enabled") is True
+    ):
+        item_contracts = {}
+        for row in selected:
+            contract_value = contracts.get(str(row.get("page_type", "default")), {})
+            if not isinstance(contract_value, Mapping):
+                contract_value = {}
+            item_contracts[str(row["item_id"])] = ContentContract(
+                required_text=tuple(contract_value.get("required_text", ())),
+                min_profile_links=int(contract_value.get("min_profile_links", 0)),
+            )
+        max_concurrency_value = batch_config.get("max_concurrency")
+        max_concurrency = (
+            int(max_concurrency_value) if max_concurrency_value is not None else None
+        )
+        batch_result = acquire_firecrawl_batch(
+            client,
+            selected,
+            args.run_dir,
+            item_contracts,
+            max_concurrency=max_concurrency,
+        )
+        counts.update(result.status for result in batch_result.results)
+        if batch_result.status != "completed":
+            counts[f"batch_{batch_result.status}"] = len(selected)
+        _emit(
+            {
+                "shard_index": args.shard_index,
+                "shard_count": args.shard_count,
+                "assigned": len(selected),
+                "counts": dict(sorted(counts.items())),
+                "batch": {
+                    "status": batch_result.status,
+                    "job_id": batch_result.job_id,
+                    "attempt": batch_result.attempt,
+                },
+            }
+        )
+        return (
+            0
+            if batch_result.status == "completed" and set(counts) <= {"complete"}
+            else 2
+        )
     for row in selected:
         contract_value = contracts.get(str(row.get("page_type", "default")), {})
         if not isinstance(contract_value, Mapping):
@@ -723,6 +775,32 @@ def _validate_memberships_for_study(
         raise SystemExit(
             f"roster facts do not cover configured seasons: missing={missing_seasons}"
         )
+    source_config = _load_object(Path(study.roster_source_config_path))
+    _validate_roster_source_config(source_config, study)
+    expected_counts: Counter[int] = Counter()
+    for page in source_config["pages"]:
+        if not isinstance(page, Mapping):
+            raise SystemExit("roster source page must be an object")
+        try:
+            season_start = int(page["season_start"])
+            expected_player_count = int(page["expected_player_count"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise SystemExit(
+                "every roster source page needs season_start and "
+                "expected_player_count integers"
+            ) from exc
+        if expected_player_count < 1:
+            raise SystemExit("expected_player_count must be positive")
+        expected_counts[season_start] += expected_player_count
+    actual_counts = Counter(row.season_start for row in memberships)
+    for season_start, expected_count in sorted(expected_counts.items()):
+        actual_count = actual_counts[season_start]
+        if actual_count != expected_count:
+            raise SystemExit(
+                "roster fact count does not match source contract: "
+                f"season={season_start} actual={actual_count} "
+                f"expected={expected_count}"
+            )
 
 
 def _safe_error(exc: Exception) -> str:
