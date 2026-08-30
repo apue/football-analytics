@@ -147,7 +147,7 @@ def test_firecrawl_batch_is_persisted_resumable_and_validates_each_item(tmp_path
             self.starts = 0
             self.polls = 0
 
-        def start_batch_job(self, urls, *, formats, max_concurrency):
+        def start_batch_request(self, urls, *, formats, max_concurrency):
             self.starts += 1
             assert list(urls) == [
                 "https://example.test/a",
@@ -216,6 +216,8 @@ def test_firecrawl_batch_is_persisted_resumable_and_validates_each_item(tmp_path
     assert completed.status == "completed"
     assert [result.status for result in completed.results] == ["complete", "complete"]
     assert cached.status == "completed"
+    assert cached.job_id == "job-123"
+    assert cached.attempt == 1
     assert all(result.cache_state == "hit" for result in cached.results)
     assert client.starts == 1
     assert client.polls == 2
@@ -231,7 +233,7 @@ def test_firecrawl_batch_is_persisted_resumable_and_validates_each_item(tmp_path
 
 def test_firecrawl_batch_failure_writes_per_item_failure_records(tmp_path):
     class StubClient:
-        def start_batch_job(self, urls, *, formats, max_concurrency):
+        def start_batch_request(self, urls, *, formats, max_concurrency):
             return {"success": True, "id": "job-failed"}
 
         def batch_status(self, _job_id):
@@ -257,14 +259,16 @@ def test_firecrawl_batch_failure_writes_per_item_failure_records(tmp_path):
     assert failed.results[0].status == "validation_failed"
     assert failed.results[0].provider_status == "failed"
     assert failed.results[0].error_classification == "provider_response"
-    assert cached.status == "completed"
+    assert cached.status == "failed"
+    assert cached.job_id == "job-failed"
+    assert cached.attempt == 1
     assert cached.results[0].cache_state == "hit"
     assert (tmp_path / "records/a.json").exists()
 
 
 def test_firecrawl_batch_start_http_error_writes_provider_failure_records(tmp_path):
     class StubClient:
-        def start_batch_job(self, urls, *, formats, max_concurrency):
+        def start_batch_request(self, urls, *, formats, max_concurrency):
             raise HTTPError("https://keypool.test/batch", 401, "Unauthorized", {}, None)
 
     items = [
@@ -287,6 +291,42 @@ def test_firecrawl_batch_start_http_error_writes_provider_failure_records(tmp_pa
     assert failed.results[0].error_classification == "provider_permanent"
     assert (tmp_path / "records/a.json").exists()
     assert next((tmp_path / "batches").glob("*.json")).exists()
+
+
+def test_firecrawl_batch_invalid_start_payload_is_preserved_as_provider_failure(
+    tmp_path,
+):
+    start_payload = {"success": False, "error": "invalid request", "creditsUsed": 1}
+
+    class StubClient:
+        def start_batch_request(self, urls, *, formats, max_concurrency):
+            return start_payload
+
+    items = [
+        {
+            "item_id": "a",
+            "url": "https://example.test/a",
+            "provider": "firecrawl",
+        }
+    ]
+
+    failed = acquire_firecrawl_batch(
+        StubClient(), items, tmp_path, {"a": ContentContract()}
+    )
+    cached = acquire_firecrawl_batch(
+        StubClient(), items, tmp_path, {"a": ContentContract()}
+    )
+
+    assert failed.status == "failed"
+    assert failed.results[0].status == "validation_failed"
+    assert failed.results[0].provider_status == "failed"
+    assert failed.results[0].error_classification == "provider_response"
+    assert cached.status == "failed"
+    raw_start = next((tmp_path / "raw/firecrawl-batch").rglob("*-start.json"))
+    assert json.loads(raw_start.read_text()) == start_payload
+    job = json.loads(next((tmp_path / "batches").glob("*.json")).read_text())
+    assert job["error_classification"] == "provider_response"
+    assert job["cost"] == 1.0
 
 
 def test_firecrawl_permanent_target_failure_is_cached_without_retry(tmp_path):

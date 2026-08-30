@@ -153,7 +153,26 @@ class FirecrawlClient:
         formats: tuple[str, ...] = ("rawHtml", "markdown"),
         max_concurrency: int | None = None,
     ) -> Mapping[str, Any]:
-        """Start a batch and return its unmodified auditable response."""
+        """Start a batch and require a provider-confirmed job identifier."""
+
+        response = self.start_batch_request(
+            urls,
+            formats=formats,
+            max_concurrency=max_concurrency,
+        )
+        job_id = response.get("id")
+        if response.get("success") is not True or not isinstance(job_id, str):
+            raise AcquisitionError("Firecrawl batch did not return a job id")
+        return response
+
+    def start_batch_request(
+        self,
+        urls: Iterable[str],
+        *,
+        formats: tuple[str, ...] = ("rawHtml", "markdown"),
+        max_concurrency: int | None = None,
+    ) -> Mapping[str, Any]:
+        """Start a batch and return the unmodified provider response."""
 
         payload: dict[str, Any] = {
             "urls": list(urls),
@@ -162,16 +181,12 @@ class FirecrawlClient:
         }
         if max_concurrency is not None:
             payload["maxConcurrency"] = max_concurrency
-        response = self._request_json(
+        return self._request_json(
             "POST",
             f"{self._config.base_url}/v2/batch/scrape",
             self._headers(),
             payload,
         )
-        job_id = response.get("id")
-        if response.get("success") is not True or not isinstance(job_id, str):
-            raise AcquisitionError("Firecrawl batch did not return a job id")
-        return response
 
     def batch_status(self, job_id: str) -> Mapping[str, Any]:
         """Read one batch status page through the same KeyPool route."""
@@ -286,6 +301,20 @@ def acquire_firecrawl_batch(
     """Start or resume one batch and validate every completed target item."""
 
     item_rows = list(items)
+    fingerprint = hashlib.sha256(
+        "\0".join(sorted(str(item["item_id"]) for item in item_rows)).encode()
+    ).hexdigest()[:20]
+    job_path = run_dir / "batches" / f"{fingerprint}.json"
+    previous = json.loads(job_path.read_text()) if job_path.exists() else {}
+    raw_dir = run_dir / "raw" / "firecrawl-batch" / fingerprint
+
+    class PayloadClient:
+        def __init__(self, value: Mapping[str, Any]) -> None:
+            self.value = value
+
+        def scrape(self, _url: str, *, formats: tuple[str, ...]) -> Mapping[str, Any]:
+            return self.value
+
     cached_by_id: dict[str, AcquisitionResult] = {}
     pending = []
     for item in item_rows:
@@ -302,24 +331,18 @@ def acquire_firecrawl_batch(
 
     if not pending:
         return BatchAcquisitionResult(
-            "completed",
-            None,
-            0,
+            str(previous.get("status", "completed")),
+            str(previous["job_id"]) if previous.get("job_id") else None,
+            int(previous.get("attempt", 0)),
             tuple(cached_by_id[str(item["item_id"])] for item in item_rows),
         )
 
-    fingerprint = hashlib.sha256(
-        "\0".join(sorted(str(item["item_id"]) for item in pending)).encode()
-    ).hexdigest()[:20]
-    job_path = run_dir / "batches" / f"{fingerprint}.json"
-    previous = json.loads(job_path.read_text()) if job_path.exists() else {}
     active = previous.get("status") in {"queued", "processing"}
     attempt = (
         int(previous.get("attempt", 0))
         if active
         else int(previous.get("attempt", 0)) + 1
     )
-    raw_dir = run_dir / "raw" / "firecrawl-batch" / fingerprint
     job_raw_paths = list(previous.get("raw_paths", []))
 
     def persist_batch_exception(
@@ -374,17 +397,50 @@ def acquire_firecrawl_batch(
         job = dict(previous)
     else:
         try:
-            start_payload = client.start_batch_job(
+            start_payload = client.start_batch_request(
                 [str(item["url"]) for item in pending],
                 formats=("rawHtml", "markdown"),
                 max_concurrency=max_concurrency,
             )
         except Exception as exc:
             return persist_batch_exception(exc, "start", None)
-        job_id = str(start_payload["id"])
         start_path = raw_dir / f"attempt-{attempt:03d}-start.json"
         _write_json(start_path, start_payload)
         job_raw_paths = [str(start_path.relative_to(run_dir))]
+        job_id_value = start_payload.get("id")
+        if start_payload.get("success") is not True or not isinstance(
+            job_id_value, str
+        ):
+            failed_results = dict(cached_by_id)
+            for item in pending:
+                item_id = str(item["item_id"])
+                failed_results[item_id] = acquire_firecrawl_item(
+                    PayloadClient(start_payload),
+                    item,
+                    run_dir,
+                    contracts.get(item_id, ContentContract()),
+                )
+            _write_json(
+                job_path,
+                {
+                    "job_id": None,
+                    "status": "failed",
+                    "attempt": attempt,
+                    "item_ids": [str(item["item_id"]) for item in pending],
+                    "urls": [str(item["url"]) for item in pending],
+                    "started_at": datetime.now(UTC).isoformat(),
+                    "raw_paths": job_raw_paths,
+                    "cost": _provider_cost(start_payload),
+                    "error_classification": "provider_response",
+                },
+            )
+            return BatchAcquisitionResult(
+                "failed",
+                None,
+                attempt,
+                tuple(failed_results[str(item["item_id"])] for item in item_rows),
+            )
+        job_id = job_id_value
         job = {
             "job_id": job_id,
             "status": "queued",
@@ -415,13 +471,6 @@ def acquire_firecrawl_batch(
         }
     )
     _write_json(job_path, job)
-
-    class PayloadClient:
-        def __init__(self, value: Mapping[str, Any]) -> None:
-            self.value = value
-
-        def scrape(self, _url: str, *, formats: tuple[str, ...]) -> Mapping[str, Any]:
-            return self.value
 
     if status != "completed":
         if status in {"queued", "processing"}:

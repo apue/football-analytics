@@ -491,7 +491,7 @@ def test_acquire_runs_and_persists_firecrawl_batch_workflow(
         def __init__(self, _config):
             pass
 
-        def start_batch_job(self, urls, *, formats, max_concurrency):
+        def start_batch_request(self, urls, *, formats, max_concurrency):
             assert list(urls) == [page["url"] for page in pages]
             assert max_concurrency == 2
             return {"success": True, "id": "job-123"}
