@@ -27,6 +27,7 @@ class AcademyStudyConfig:
     sustained_qualifying_seasons: int
     competition_policy_path: str
     roster_source_config_path: str
+    roster_evidence_path: str
     roster_source_policy_status: str
     roster_source_public_url: str
     adult_source_scope_id: str
@@ -35,7 +36,6 @@ class AcademyStudyConfig:
     adult_source_coverage_note: str
     run_dir: str
     report_path: str
-    language: str
 
     def summary(self) -> dict[str, Any]:
         """Return the stable fields useful in validation and handoffs."""
@@ -57,9 +57,7 @@ class AcademyStudyConfig:
         }
 
 
-def load_academy_study_config(
-    path: Path, *, require_approved: bool = False
-) -> AcademyStudyConfig:
+def load_academy_study_config(path: Path) -> AcademyStudyConfig:
     """Load and validate one study JSON file."""
 
     try:
@@ -67,6 +65,20 @@ def load_academy_study_config(
     except (OSError, json.JSONDecodeError) as exc:
         raise ValueError(f"invalid study config {path}: {exc}") from exc
     root = _object(value, "study config")
+    _only_fields(
+        root,
+        {
+            "schema_version",
+            "study_id",
+            "academy",
+            "cohorts",
+            "outcomes",
+            "roster_source",
+            "adult_source",
+            "outputs",
+        },
+        "study config",
+    )
 
     if _integer(root.get("schema_version"), "schema_version") != 1:
         raise ValueError("schema_version must be 1")
@@ -75,11 +87,23 @@ def load_academy_study_config(
         raise ValueError("study_id must use lowercase letters, digits, and hyphens")
 
     academy = _object(root.get("academy"), "academy")
+    _only_fields(academy, {"academy_id", "display_name", "squad_name"}, "academy")
     academy_id = _text(academy.get("academy_id"), "academy.academy_id")
     display_name = _text(academy.get("display_name"), "academy.display_name")
     squad_name = _text(academy.get("squad_name"), "academy.squad_name")
 
     cohorts = _object(root.get("cohorts"), "cohorts")
+    _only_fields(
+        cohorts,
+        {
+            "roster_season_start",
+            "roster_season_end",
+            "exit_season_start",
+            "exit_season_end",
+            "observation_season_count",
+        },
+        "cohorts",
+    )
     roster_start = _integer(
         cohorts.get("roster_season_start"), "cohorts.roster_season_start"
     )
@@ -99,6 +123,16 @@ def load_academy_study_config(
         raise ValueError("observation_season_count must be positive")
 
     outcomes = _object(root.get("outcomes"), "outcomes")
+    _only_fields(
+        outcomes,
+        {
+            "primary_appearance_threshold",
+            "sensitivity_thresholds",
+            "sustained_qualifying_seasons",
+            "competition_policy_path",
+        },
+        "outcomes",
+    )
     primary = _integer(
         outcomes.get("primary_appearance_threshold"),
         "outcomes.primary_appearance_threshold",
@@ -131,15 +165,18 @@ def load_academy_study_config(
     roster_source = _source(
         root.get("roster_source"),
         "roster_source",
-        require_approved=require_approved,
+        {"config_path", "evidence_path", "policy_status", "public_url"},
     )
     roster_config_path = _text(
         roster_source.get("config_path"), "roster_source.config_path"
     )
+    roster_evidence_path = _text(
+        roster_source.get("evidence_path"), "roster_source.evidence_path"
+    )
     adult_source = _source(
         root.get("adult_source"),
         "adult_source",
-        require_approved=require_approved,
+        {"scope_id", "policy_status", "public_url", "coverage_note"},
     )
     adult_scope = _text(adult_source.get("scope_id"), "adult_source.scope_id")
     adult_coverage_note = _text(
@@ -147,11 +184,9 @@ def load_academy_study_config(
     )
 
     outputs = _object(root.get("outputs"), "outputs")
+    _only_fields(outputs, {"run_dir", "report_path"}, "outputs")
     run_dir = _text(outputs.get("run_dir"), "outputs.run_dir")
     report_path = _text(outputs.get("report_path"), "outputs.report_path")
-    language = _text(outputs.get("language"), "outputs.language")
-    if language != "zh-CN":
-        raise ValueError("outputs.language currently supports only zh-CN")
     if not _is_within(Path(report_path), Path(run_dir)):
         raise ValueError("outputs.report_path must be inside outputs.run_dir")
 
@@ -170,6 +205,7 @@ def load_academy_study_config(
         sustained_qualifying_seasons=sustained,
         competition_policy_path=competition_policy_path,
         roster_source_config_path=roster_config_path,
+        roster_evidence_path=roster_evidence_path,
         roster_source_policy_status=roster_source["policy_status"],
         roster_source_public_url=roster_source["public_url"],
         adult_source_scope_id=adult_scope,
@@ -178,21 +214,15 @@ def load_academy_study_config(
         adult_source_coverage_note=adult_coverage_note,
         run_dir=run_dir,
         report_path=report_path,
-        language=language,
     )
 
 
-def _source(value: Any, name: str, *, require_approved: bool) -> dict[str, str]:
+def _source(value: Any, name: str, fields: set[str]) -> dict[str, str]:
     source = _object(value, name)
-    if "adapter" in source:
-        raise ValueError(f"{name}.adapter is obsolete; sources are artifact-based")
+    _only_fields(source, fields, name)
     status = _text(source.get("policy_status"), f"{name}.policy_status")
-    if status not in {"pending", "approved", "prohibited"}:
-        raise ValueError(
-            f"{name}.policy_status must be pending, approved, or prohibited"
-        )
-    if require_approved and status != "approved":
-        raise ValueError(f"{name}.policy_status must be approved before acquisition")
+    if status != "approved":
+        raise ValueError(f"{name}.policy_status must be approved")
     public_url = _text(source.get("public_url"), f"{name}.public_url")
     return {
         **source,
@@ -205,6 +235,12 @@ def _object(value: Any, name: str) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise ValueError(f"{name} must be an object")
     return value
+
+
+def _only_fields(value: dict[str, Any], fields: set[str], name: str) -> None:
+    unsupported = sorted(set(value) - fields)
+    if unsupported:
+        raise ValueError(f"{name} has unsupported fields: {unsupported}")
 
 
 def _integer(value: Any, name: str) -> int:

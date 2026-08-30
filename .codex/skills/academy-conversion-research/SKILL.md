@@ -50,7 +50,6 @@ Place reviewed PDFs under an ignored local directory and create candidates with:
 ```bash
 uv run --with pymupdf academy-conversion parse-official-rosters \
   --study-config <study.json> \
-  --source-config <academy-sources.json> \
   --pdf-dir <reviewed-pdfs> \
   --output-dir <configured-run-dir>/parsed-rosters
 ```

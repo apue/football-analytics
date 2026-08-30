@@ -21,6 +21,10 @@ Juvenil A season rosters:
 
 The relevant roster page in every report must be visually checked. Text
 extraction alone does not establish that the table is complete.
+The reviewed seven-URL approval artifact is committed at
+`config/academy_conversion/barcelona_approved_sources.jsonl`; live search
+output remains a separate discovery/comparison artifact and cannot silently
+replace a frozen URL.
 
 ## Transfermarkt
 

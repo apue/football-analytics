@@ -3,10 +3,15 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 from collections.abc import Iterable
+from pathlib import Path
 
 from .academy_conversion import RosterCandidate
+from .academy_conversion_io import write_roster_candidates
+from .academy_sources import require_source_evidence
+from .academy_study import load_academy_study_config
 
 PdfBlock = tuple[float, float, float, float, str]
 
@@ -34,6 +39,90 @@ _POSITIONS = {
     "delantero": "forward",
     "davanter": "forward",
 }
+
+
+def parse_reviewed_rosters(
+    *,
+    study_config_path: Path,
+    pdf_dir: Path,
+    output_dir: Path,
+) -> dict[str, object]:
+    """Parse every reviewed PDF declared by one approved academy study."""
+
+    try:
+        import pymupdf
+    except ImportError as exc:
+        raise ValueError(
+            "pymupdf is required; run with: uv run --with pymupdf "
+            "academy-conversion parse-official-rosters ..."
+        ) from exc
+
+    study = load_academy_study_config(study_config_path)
+    _require_within(output_dir, Path(study.run_dir), "output directory")
+    config = require_source_evidence(
+        Path(study.roster_source_config_path), Path(study.roster_evidence_path)
+    )
+    if config.get("academy_id") != study.academy_id:
+        raise ValueError("roster source academy does not match study")
+    pages = config["pages"]
+    expected_seasons = set(
+        range(study.roster_season_start, study.roster_season_end + 1)
+    )
+    actual_seasons = {int(page.get("season_start", -1)) for page in pages}
+    if actual_seasons != expected_seasons:
+        raise ValueError("roster source seasons do not match the frozen study")
+
+    all_candidates = []
+    checks = []
+    for page_config in pages:
+        filename = page_config.get("filename")
+        if not isinstance(filename, str) or not filename:
+            raise ValueError("every roster source page requires filename")
+        pdf_path = pdf_dir / filename
+        _require_within(pdf_path, pdf_dir, "roster PDF")
+        source_page = int(page_config["roster_page"])
+        with pymupdf.open(pdf_path) as document:
+            if not 1 <= source_page <= len(document):
+                raise ValueError(f"roster page out of range: {filename}")
+            pdf_page = document[source_page - 1]
+            blocks = [(*block[:4], block[4]) for block in pdf_page.get_text("blocks")]
+        candidates = parse_roster_blocks(
+            blocks,
+            academy_id=study.academy_id,
+            season_start=int(page_config["season_start"]),
+            source_url=str(page_config["url"]),
+            source_page=source_page,
+        )
+        expected_count = int(page_config["expected_player_count"])
+        if len(candidates) != expected_count:
+            raise ValueError(
+                "roster count mismatch: "
+                f"season={page_config['season_start']} "
+                f"actual={len(candidates)} expected={expected_count}"
+            )
+        all_candidates.extend(candidates)
+        with pdf_path.open("rb") as handle:
+            content_sha256 = hashlib.file_digest(handle, "sha256").hexdigest()
+        checks.append(
+            {
+                "season_start": int(page_config["season_start"]),
+                "source_page": source_page,
+                "player_count": len(candidates),
+                "content_sha256": content_sha256,
+            }
+        )
+    write_roster_candidates(output_dir / "roster_candidates.csv", all_candidates)
+    validation: dict[str, object] = {
+        "valid": True,
+        "season_count": len(checks),
+        "candidate_count": len(all_candidates),
+        "checks": checks,
+    }
+    output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / "validation.json").write_text(
+        json.dumps(validation, ensure_ascii=False, indent=2) + "\n"
+    )
+    return validation
 
 
 def parse_roster_blocks(
@@ -145,3 +234,10 @@ def _block_text_with_continuations(block: PdfBlock, blocks: Iterable[PdfBlock]) 
         parts.append(follower_text)
         current = follower
     return " ".join(parts)
+
+
+def _require_within(path: Path, parent: Path, label: str) -> None:
+    try:
+        path.resolve().relative_to(parent.resolve())
+    except ValueError as exc:
+        raise ValueError(f"{label} must be inside configured run directory") from exc

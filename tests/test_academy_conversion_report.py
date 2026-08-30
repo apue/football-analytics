@@ -48,6 +48,7 @@ def _write_study(
                 },
                 "roster_source": {
                     "config_path": str(path.parent / "roster-source.json"),
+                    "evidence_path": str(path.parent / "evidence.jsonl"),
                     "policy_status": "approved",
                     "public_url": "https://club.example/academy",
                 },
@@ -60,7 +61,6 @@ def _write_study(
                 "outputs": {
                     "run_dir": str(output.parent),
                     "report_path": str(output),
-                    "language": "zh-CN",
                 },
             }
         )

@@ -2,7 +2,10 @@ import json
 
 import pytest
 
-from football_analytics.academy_sources import validate_source_evidence
+from football_analytics.academy_sources import (
+    require_source_evidence,
+    validate_source_evidence,
+)
 
 
 def _write_source_config(path, urls, **extra):
@@ -85,15 +88,25 @@ def test_source_validation_accepts_a_complete_frozen_bundle(tmp_path):
     assert result["missing"] == []
 
 
-def test_source_validation_rejects_deprecated_provider_switch(tmp_path):
+def test_required_source_evidence_fails_closed_when_a_source_is_missing(tmp_path):
+    source_config = tmp_path / "sources.json"
+    bundle = tmp_path / "evidence.jsonl"
+    _write_source_config(source_config, ["https://official.test/2015.pdf"])
+    _write_bundle(bundle, [])
+
+    with pytest.raises(ValueError, match="approved roster sources are missing"):
+        require_source_evidence(source_config, bundle)
+
+
+def test_source_validation_rejects_unknown_fields(tmp_path):
     source_config = tmp_path / "sources.json"
     bundle = tmp_path / "evidence.jsonl"
     _write_source_config(
         source_config,
         ["https://official.test/2015.pdf"],
-        provider="http-file",
+        unexpected="value",
     )
     _write_bundle(bundle, ["https://official.test/2015.pdf"])
 
-    with pytest.raises(ValueError, match="provider is obsolete"):
+    with pytest.raises(ValueError, match="source config has unsupported fields"):
         validate_source_evidence(source_config, bundle)

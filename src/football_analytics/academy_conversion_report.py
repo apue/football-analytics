@@ -31,7 +31,7 @@ def render_report(
         summaries = list(csv.DictReader(handle))
     with outcomes_path.open(newline="") as handle:
         outcomes = list(csv.DictReader(handle))
-    study = load_academy_study_config(study_config_path, require_approved=True)
+    study = load_academy_study_config(study_config_path)
     competition_policy = _load_competition_policy(Path(study.competition_policy_path))
     appearances = load_appearances(appearances_path)
     rules = load_competition_rules(competitions_path)

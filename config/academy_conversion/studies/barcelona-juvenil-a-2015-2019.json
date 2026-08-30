@@ -21,6 +21,7 @@
   },
   "roster_source": {
     "config_path": "config/academy_conversion/barcelona_juvenil_a_rosters.json",
+    "evidence_path": "config/academy_conversion/barcelona_approved_sources.jsonl",
     "policy_status": "approved",
     "public_url": "https://www.fcbarcelona.com/en/club/organisation-and-strategic-plan/commissions-and-bodies/annual-reports"
   },
@@ -32,7 +33,6 @@
   },
   "outputs": {
     "run_dir": "data/processed/academy-conversion/runs/barcelona-v1",
-    "report_path": "data/processed/academy-conversion/runs/barcelona-v1/report/index.html",
-    "language": "zh-CN"
+    "report_path": "data/processed/academy-conversion/runs/barcelona-v1/report/index.html"
   }
 }

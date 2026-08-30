@@ -21,18 +21,18 @@
   },
   "roster_source": {
     "config_path": "config/academy_conversion/academy_rosters.json",
-    "policy_status": "pending",
+    "evidence_path": "config/academy_conversion/academy_approved_sources.jsonl",
+    "policy_status": "approved",
     "public_url": "https://club.example/official-reports"
   },
   "adult_source": {
     "scope_id": "career-source-scope",
-    "policy_status": "pending",
+    "policy_status": "approved",
     "public_url": "https://data.example/careers",
     "coverage_note": "State the observable competitions and missingness."
   },
   "outputs": {
     "run_dir": "data/processed/academy-conversion/runs/study-id",
-    "report_path": "data/processed/academy-conversion/runs/study-id/report/index.html",
-    "language": "zh-CN"
+    "report_path": "data/processed/academy-conversion/runs/study-id/report/index.html"
   }
 }

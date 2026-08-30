@@ -1,8 +1,9 @@
 # Codebase map
 
 - `src/football_analytics`: dependency-free reusable Python package.
-- `tests`: deterministic tests; network calls must be stubbed unless explicitly
-  running the online E2E command.
+- `tests`: deterministic tests and minimal documented regression fixtures;
+  network calls must be stubbed unless explicitly running the online E2E
+  command.
 - `.codex/skills`: repository-local reusable operating guidance.
 - `config`: committed frozen research and search configuration.
 - `data/external`, `data/processed`: ignored runtime data; never committed.

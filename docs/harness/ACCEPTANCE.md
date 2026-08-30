@@ -10,8 +10,9 @@
 - Academy modules do not import KeyPool/Firecrawl transport code.
 - A complete frozen official-source set validates against an accepted evidence
   bundle; incomplete live recall fails closed and reports exact differences.
-- The existing Barcelona roster/career fixtures reproduce 85 exit-cohort
-  players, zero validation issues, and the frozen cohort summary.
+- The committed minimal Barcelona roster/career fixtures reproduce 85
+  exit-cohort players, zero validation issues, and the frozen cohort summary
+  from a fresh checkout.
 - Skill packages pass `quick_validate.py`.
 
 ## Online gate
