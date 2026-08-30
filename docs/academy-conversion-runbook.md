@@ -17,6 +17,15 @@ The CLI inventory is available with:
 uv run academy-conversion --help
 ```
 
+Before creating a live manifest, run `academy-conversion health` against one
+representative target. Its JSON `checks` object reports KeyPool configuration,
+transport, Firecrawl response, target HTTP status, content contract, and the
+built-in roster-parser probe separately. Later gates remain `not_checked` after
+an earlier failure, so an operator can see the exact boundary that stopped the
+run. The parser probe is a deterministic golden input; the source-specific
+parser and expected roster count are still checked during
+`parse-official-rosters`.
+
 Official roster reports use
 `config/academy_conversion/barcelona_juvenil_a_rosters.json`. Generate and
 acquire its manifest, require `validate-run` to pass, then parse with:
@@ -45,6 +54,11 @@ These stages fail if the supplied source config or run directory differs from
 the frozen study, if its academy or roster seasons differ, or if an output
 escapes the configured run directory.
 
+Acquisition records distinguish transport, provider, target, content, cache,
+and error-classification states. Completed records and permanent target/content
+failures are reused without another request. Only transient transport failures,
+HTTP 408/429, and 5xx target failures are eligible for a later bounded retry.
+
 Roster candidates do not become denominator facts until a reviewed identity
 table passes `resolve-rosters`. Worker alias proposals are merged only through
 `merge-source-link-proposals`; the command fails closed on conflicting people
@@ -63,6 +77,12 @@ uv run academy-conversion analyze \
   --coverage <coverage.csv> \
   --output-dir <analysis-output>
 ```
+
+The roster membership input must contain at least one reviewed membership for
+every configured roster season, including the post-cohort boundary seasons.
+Analysis stops before cohort construction when a configured season is absent;
+otherwise a continuing youth player could be silently misclassified as an
+exit.
 
 Render the local report only from validated analysis artifacts:
 

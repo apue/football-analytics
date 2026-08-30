@@ -6,10 +6,11 @@ import hashlib
 import json
 import tempfile
 from collections.abc import Callable, Iterable, Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+from urllib.error import HTTPError
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
@@ -67,12 +68,17 @@ class AcquisitionResult:
     url: str
     provider: str
     status: str
+    transport_status: str
+    provider_status: str
+    cache_state: str
     attempt: int
     retrieved_at: str
     raw_path: Path
     content_path: Path | None
     target_status: int | None
     content_sha256: str | None
+    error_classification: str | None
+    cost: float | None
     error: str | None
 
 
@@ -257,8 +263,8 @@ def acquire_firecrawl_item(
     record_path = run_dir / "records" / f"{item_id}.json"
     if record_path.exists():
         existing = _result_from_record(record_path, json.loads(record_path.read_text()))
-        if existing.status == "complete":
-            return existing
+        if existing.status != "retryable_failed":
+            return replace(existing, cache_state="hit")
 
     attempt_dir = run_dir / "raw" / provider / item_id
     attempt = len(list(attempt_dir.glob("attempt-*.json"))) + 1
@@ -273,7 +279,10 @@ def acquire_firecrawl_item(
         )
         _write_json(
             error_path,
-            {"error_type": type(exc).__name__, "classification": result.status},
+            {
+                "error_type": type(exc).__name__,
+                "classification": result.error_classification,
+            },
         )
         _write_json(record_path, _result_record(result, record_path))
         return result
@@ -282,17 +291,27 @@ def acquire_firecrawl_item(
     try:
         document = validate_firecrawl_document(payload, contract)
     except FirecrawlDocumentError as exc:
+        error_classification = _firecrawl_error_classification(payload)
         result = AcquisitionResult(
             item_id=item_id,
             url=url,
             provider=provider,
-            status="validation_failed",
+            status=(
+                "retryable_failed"
+                if error_classification == "target_transient"
+                else "validation_failed"
+            ),
+            transport_status="passed",
+            provider_status=("passed" if payload.get("success") is True else "failed"),
+            cache_state="miss",
             attempt=attempt,
             retrieved_at=retrieved_at,
             raw_path=raw_path,
             content_path=None,
             target_status=_target_status(payload),
             content_sha256=None,
+            error_classification=error_classification,
+            cost=_provider_cost(payload),
             error=str(exc),
         )
     else:
@@ -303,12 +322,17 @@ def acquire_firecrawl_item(
             url=url,
             provider=provider,
             status="complete",
+            transport_status="passed",
+            provider_status="passed",
+            cache_state="miss",
             attempt=attempt,
             retrieved_at=retrieved_at,
             raw_path=raw_path,
             content_path=content_path,
             target_status=document.target_status,
             content_sha256=document.content_sha256,
+            error_classification=None,
+            cost=_provider_cost(payload),
             error=None,
         )
 
@@ -330,8 +354,8 @@ def acquire_http_file_item(
     record_path = run_dir / "records" / f"{item_id}.json"
     if record_path.exists():
         existing = _result_from_record(record_path, json.loads(record_path.read_text()))
-        if existing.status == "complete":
-            return existing
+        if existing.status != "retryable_failed":
+            return replace(existing, cache_state="hit")
 
     attempt_dir = run_dir / "raw" / provider / item_id
     attempt = len(list(attempt_dir.glob("attempt-*"))) + 1
@@ -347,7 +371,10 @@ def acquire_http_file_item(
         )
         _write_json(
             error_path,
-            {"error_type": type(exc).__name__, "classification": result.status},
+            {
+                "error_type": type(exc).__name__,
+                "classification": result.error_classification,
+            },
         )
         _write_json(record_path, _result_record(result, record_path))
         return result
@@ -366,17 +393,29 @@ def acquire_http_file_item(
     if len(body) < contract.min_bytes:
         errors.append(f"content_bytes={len(body)} minimum={contract.min_bytes}")
 
+    error_classification = _target_error_classification(status) if errors else None
     result = AcquisitionResult(
         item_id=item_id,
         url=url,
         provider=provider,
-        status="validation_failed" if errors else "complete",
+        status=(
+            "retryable_failed"
+            if error_classification == "target_transient"
+            else "validation_failed"
+            if errors
+            else "complete"
+        ),
+        transport_status="passed",
+        provider_status="passed",
+        cache_state="miss",
         attempt=attempt,
         retrieved_at=retrieved_at,
         raw_path=raw_path,
         content_path=None if errors else raw_path,
         target_status=status,
         content_sha256=hashlib.sha256(body).hexdigest() if not errors else None,
+        error_classification=error_classification,
+        cost=None,
         error="; ".join(errors) if errors else None,
     )
     _write_json(record_path, _result_record(result, record_path))
@@ -445,6 +484,23 @@ def _target_status(payload: Mapping[str, Any]) -> int | None:
     return value if isinstance(value, int) else None
 
 
+def _target_error_classification(status: int) -> str:
+    if status in {408, 429} or status >= 500:
+        return "target_transient"
+    if not 200 <= status < 300:
+        return "target_permanent"
+    return "content_contract"
+
+
+def _firecrawl_error_classification(payload: Mapping[str, Any]) -> str:
+    if payload.get("success") is not True:
+        return "provider_response"
+    target_status = _target_status(payload)
+    if target_status is not None and not 200 <= target_status < 300:
+        return _target_error_classification(target_status)
+    return "content_contract"
+
+
 def _transport_failure(
     item_id: str,
     url: str,
@@ -454,17 +510,32 @@ def _transport_failure(
     raw_path: Path,
     exc: Exception,
 ) -> AcquisitionResult:
+    target_status = exc.code if isinstance(exc, HTTPError) else None
+    error_classification = (
+        _target_error_classification(target_status)
+        if target_status is not None
+        else "transport_transient"
+    )
     return AcquisitionResult(
         item_id=item_id,
         url=url,
         provider=provider,
-        status="retryable_failed",
+        status=(
+            "retryable_failed"
+            if error_classification in {"target_transient", "transport_transient"}
+            else "validation_failed"
+        ),
+        transport_status="passed" if target_status is not None else "failed",
+        provider_status="passed" if target_status is not None else "not_checked",
+        cache_state="miss",
         attempt=attempt,
         retrieved_at=retrieved_at,
         raw_path=raw_path,
         content_path=None,
-        target_status=None,
+        target_status=target_status,
         content_sha256=None,
+        error_classification=error_classification,
+        cost=None,
         error=type(exc).__name__,
     )
 
@@ -476,6 +547,9 @@ def _result_record(result: AcquisitionResult, record_path: Path) -> dict[str, An
         "url": result.url,
         "provider": result.provider,
         "status": result.status,
+        "transport_status": result.transport_status,
+        "provider_status": result.provider_status,
+        "cache_state": result.cache_state,
         "attempt": result.attempt,
         "retrieved_at": result.retrieved_at,
         "raw_path": str(result.raw_path.relative_to(root)),
@@ -484,6 +558,8 @@ def _result_record(result: AcquisitionResult, record_path: Path) -> dict[str, An
         ),
         "target_status": result.target_status,
         "content_sha256": result.content_sha256,
+        "error_classification": result.error_classification,
+        "cost": result.cost,
         "error": result.error,
     }
 
@@ -498,6 +574,9 @@ def _result_from_record(
         url=str(record["url"]),
         provider=str(record["provider"]),
         status=str(record["status"]),
+        transport_status=str(record.get("transport_status", "not_recorded")),
+        provider_status=str(record.get("provider_status", "not_recorded")),
+        cache_state=str(record.get("cache_state", "not_recorded")),
         attempt=int(record["attempt"]),
         retrieved_at=str(record["retrieved_at"]),
         raw_path=root / str(record["raw_path"]),
@@ -510,8 +589,27 @@ def _result_from_record(
         content_sha256=(
             str(record["content_sha256"]) if record.get("content_sha256") else None
         ),
+        error_classification=(
+            str(record["error_classification"])
+            if record.get("error_classification")
+            else None
+        ),
+        cost=(
+            float(record["cost"])
+            if isinstance(record.get("cost"), (int, float))
+            and not isinstance(record.get("cost"), bool)
+            else None
+        ),
         error=str(record["error"]) if record.get("error") else None,
     )
+
+
+def _provider_cost(payload: Mapping[str, Any]) -> float | None:
+    for key in ("creditsUsed", "credits_used", "cost"):
+        value = payload.get(key)
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            return float(value)
+    return None
 
 
 def _write_json(path: Path, value: Mapping[str, Any]) -> None:

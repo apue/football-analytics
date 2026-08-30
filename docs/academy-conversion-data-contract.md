@@ -5,6 +5,21 @@ Version: 1
 The pipeline separates source facts, identity review, analytical policy, and
 derived outcomes. Missing data is never encoded as zero.
 
+## Acquisition record envelope
+
+Every provider writes the same auditable record fields: `url`, `provider`,
+`retrieved_at`, `transport_status`, `provider_status`, `target_status`,
+`status`, `content_path`, `content_sha256`, `attempt`, `cache_state`,
+`error_classification`, `cost`, and `error`. `cost` is null when the provider
+does not report one. A returned cached result changes `cache_state` from
+`miss` to `hit` without rewriting the original attempt record.
+
+`complete` and non-retryable `validation_failed` records are cacheable.
+`retryable_failed` is reserved for transient transport failures, HTTP 408/429,
+and 5xx target responses. Permanent 4xx, provider-response failures, and
+content-contract failures require operator investigation rather than automatic
+retries.
+
 ## Roster identity boundary
 
 Official academy sources often publish names without stable person IDs. A
@@ -70,6 +85,9 @@ An absent coverage row is also unknown.
 Acquisition, roster parsing, fact construction, analysis, and rendering load the
 same study config. Commands reject a different academy, roster-season window,
 source config, run directory, or output path outside that run directory.
+The analysis gate also requires roster memberships to cover every configured
+roster season, including later boundary-audit seasons, before building exit
+cohorts.
 
 ## Analysis outputs
 

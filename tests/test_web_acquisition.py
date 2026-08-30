@@ -1,4 +1,5 @@
 import json
+from urllib.error import HTTPError
 
 import pytest
 
@@ -139,7 +140,7 @@ def test_firecrawl_client_supports_batch_start_and_status():
     assert calls[1][2] is None
 
 
-def test_acquisition_saves_raw_failure_and_reuses_completed_record(tmp_path):
+def test_firecrawl_permanent_target_failure_is_cached_without_retry(tmp_path):
     responses = [
         {
             "success": True,
@@ -170,17 +171,17 @@ def test_acquisition_saves_raw_failure_and_reuses_completed_record(tmp_path):
     contract = ContentContract(required_text=("Academy roster",), min_profile_links=1)
 
     failed = acquire_firecrawl_item(StubClient(), item, tmp_path, contract)
-    completed = acquire_firecrawl_item(StubClient(), item, tmp_path, contract)
     cached = acquire_firecrawl_item(StubClient(), item, tmp_path, contract)
 
     assert isinstance(failed, AcquisitionResult)
     assert failed.status == "validation_failed"
     assert failed.raw_path.exists()
-    assert completed.status == "complete"
-    assert completed.content_path is not None
-    assert completed.content_path.read_text().startswith("# Academy roster")
-    assert cached == completed
-    assert responses == []
+    assert failed.target_status == 405
+    assert failed.error_classification == "target_permanent"
+    assert failed.cache_state == "miss"
+    assert cached.status == "validation_failed"
+    assert cached.cache_state == "hit"
+    assert len(responses) == 1
 
 
 def test_firecrawl_transport_failure_is_persisted_as_retryable(tmp_path):
@@ -205,6 +206,39 @@ def test_firecrawl_transport_failure_is_persisted_as_retryable(tmp_path):
     assert json.loads((tmp_path / "records/timeout.json").read_text())["status"] == (
         "retryable_failed"
     )
+
+
+def test_firecrawl_success_records_provider_cost_and_envelope(tmp_path):
+    class StubClient:
+        def scrape(self, _url, *, formats):
+            return {
+                "success": True,
+                "creditsUsed": 2.5,
+                "data": {
+                    "markdown": "Academy roster",
+                    "metadata": {"statusCode": 200},
+                },
+            }
+
+    result = acquire_firecrawl_item(
+        StubClient(),
+        {
+            "item_id": "costed",
+            "url": "https://example.test/roster",
+            "provider": "firecrawl",
+        },
+        tmp_path,
+        ContentContract(required_text=("Academy roster",)),
+    )
+
+    assert result.status == "complete"
+    assert result.transport_status == "passed"
+    assert result.provider_status == "passed"
+    assert result.cache_state == "miss"
+    assert result.error_classification is None
+    assert result.cost == 2.5
+    record = json.loads((tmp_path / "records/costed.json").read_text())
+    assert record["cost"] == 2.5
 
 
 def test_http_file_provider_validates_pdf_and_caches_success(tmp_path):
@@ -244,8 +278,21 @@ def test_http_file_provider_validates_pdf_and_caches_success(tmp_path):
     assert first.status == "complete"
     assert first.content_path is not None
     assert first.content_path.read_bytes().startswith(b"%PDF")
-    assert second == first
+    assert first.transport_status == "passed"
+    assert first.provider_status == "passed"
+    assert first.cache_state == "miss"
+    assert first.error_classification is None
+    assert first.cost is None
+    assert second.status == first.status
+    assert second.content_path == first.content_path
+    assert second.cache_state == "hit"
     assert calls == ["https://club.example.test/report.pdf"]
+    record = json.loads((tmp_path / "records/annual-report-2019.json").read_text())
+    assert record["transport_status"] == "passed"
+    assert record["provider_status"] == "passed"
+    assert record["cache_state"] == "miss"
+    assert record["error_classification"] is None
+    assert record["cost"] is None
 
 
 def test_http_file_provider_rejects_truncated_pdf(tmp_path):
@@ -262,6 +309,36 @@ def test_http_file_provider_rejects_truncated_pdf(tmp_path):
 
     assert result.status == "validation_failed"
     assert result.error == "tail_marker=missing"
+
+
+def test_http_file_transient_503_is_retried(tmp_path):
+    responses = [
+        (503, "text/plain", b"unavailable"),
+        (200, "application/pdf", b"%PDF-1.7\nfixture\n%%EOF\n"),
+    ]
+
+    def download(_url):
+        return responses.pop(0)
+
+    item = {
+        "item_id": "temporarily-unavailable",
+        "url": "https://club.example.test/report.pdf",
+        "provider": "http-file",
+    }
+    contract = FileContract(
+        content_types=("application/pdf",),
+        magic_prefix=b"%PDF",
+        tail_marker=b"%%EOF",
+    )
+
+    failed = acquire_http_file_item(download, item, tmp_path, contract)
+    completed = acquire_http_file_item(download, item, tmp_path, contract)
+
+    assert failed.status == "retryable_failed"
+    assert failed.target_status == 503
+    assert failed.error_classification == "target_transient"
+    assert completed.status == "complete"
+    assert responses == []
 
 
 def test_http_file_transport_failure_is_persisted_as_retryable(tmp_path):
@@ -283,3 +360,27 @@ def test_http_file_transport_failure_is_persisted_as_retryable(tmp_path):
     assert result.raw_path.suffix == ".json"
     assert result.raw_path.exists()
     assert result.error == "ConnectionError"
+
+
+def test_http_file_permanent_404_is_cached_without_retry(tmp_path):
+    calls = []
+
+    def missing(url):
+        calls.append(url)
+        raise HTTPError(url, 404, "Not Found", {}, None)
+
+    item = {
+        "item_id": "missing-report",
+        "url": "https://club.example.test/missing.pdf",
+        "provider": "http-file",
+    }
+
+    failed = acquire_http_file_item(missing, item, tmp_path, FileContract())
+    cached = acquire_http_file_item(missing, item, tmp_path, FileContract())
+
+    assert failed.status == "validation_failed"
+    assert failed.transport_status == "passed"
+    assert failed.target_status == 404
+    assert failed.error_classification == "target_permanent"
+    assert cached.cache_state == "hit"
+    assert calls == ["https://club.example.test/missing.pdf"]

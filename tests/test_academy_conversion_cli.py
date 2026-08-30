@@ -2,6 +2,7 @@ import json
 
 import pytest
 
+import football_analytics.academy_conversion_cli as academy_cli
 from football_analytics.academy_conversion_cli import main
 
 
@@ -72,6 +73,135 @@ def _write_acquisition_study(path, config_path, run_dir, *, approved=True):
     value["roster_source"]["policy_status"] = "approved" if approved else "pending"
     value["adult_source"]["policy_status"] = "approved"
     path.write_text(json.dumps(value))
+
+
+def test_health_reports_each_gate_and_runs_parser_probe(tmp_path, monkeypatch, capsys):
+    parser_calls = []
+
+    class StubClient:
+        def __init__(self, _config):
+            pass
+
+        def scrape(self, _url):
+            return {
+                "success": True,
+                "data": {
+                    "markdown": "Academy roster",
+                    "metadata": {"statusCode": 200},
+                },
+            }
+
+    monkeypatch.setattr(academy_cli, "load_keypool_config", lambda _path: object())
+    monkeypatch.setattr(academy_cli, "FirecrawlClient", StubClient)
+    monkeypatch.setattr(
+        academy_cli,
+        "parse_roster_blocks",
+        lambda *args, **kwargs: parser_calls.append((args, kwargs)) or [object()],
+    )
+
+    exit_code = main(
+        [
+            "health",
+            "--env-file",
+            str(tmp_path / ".env"),
+            "--url",
+            "https://example.test/roster",
+            "--required-text",
+            "Academy roster",
+        ]
+    )
+
+    emitted = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert emitted["checks"] == {
+        "keypool": "passed",
+        "transport": "passed",
+        "firecrawl": "passed",
+        "target_page": "passed",
+        "content": "passed",
+        "parser": "passed",
+    }
+    assert len(parser_calls) == 1
+
+
+def test_health_stops_at_failed_target_page_gate(tmp_path, monkeypatch, capsys):
+    class StubClient:
+        def __init__(self, _config):
+            pass
+
+        def scrape(self, _url):
+            return {
+                "success": True,
+                "data": {
+                    "markdown": "Method Not Allowed",
+                    "metadata": {"statusCode": 405},
+                },
+            }
+
+    monkeypatch.setattr(academy_cli, "load_keypool_config", lambda _path: object())
+    monkeypatch.setattr(academy_cli, "FirecrawlClient", StubClient)
+
+    exit_code = main(
+        [
+            "health",
+            "--env-file",
+            str(tmp_path / ".env"),
+            "--url",
+            "https://example.test/roster",
+        ]
+    )
+
+    emitted = json.loads(capsys.readouterr().out)
+    assert exit_code == 2
+    assert emitted["checks"] == {
+        "keypool": "passed",
+        "transport": "passed",
+        "firecrawl": "passed",
+        "target_page": "failed",
+        "content": "not_checked",
+        "parser": "not_checked",
+    }
+    assert emitted["error"] == "target_status=405"
+
+
+def test_health_reports_parser_probe_failure(tmp_path, monkeypatch, capsys):
+    class StubClient:
+        def __init__(self, _config):
+            pass
+
+        def scrape(self, _url):
+            return {
+                "success": True,
+                "data": {
+                    "markdown": "Academy roster",
+                    "metadata": {"statusCode": 200},
+                },
+            }
+
+    monkeypatch.setattr(academy_cli, "load_keypool_config", lambda _path: object())
+    monkeypatch.setattr(academy_cli, "FirecrawlClient", StubClient)
+    monkeypatch.setattr(
+        academy_cli,
+        "parse_roster_blocks",
+        lambda *args, **kwargs: (_ for _ in ()).throw(ValueError("broken parser")),
+    )
+
+    exit_code = main(
+        [
+            "health",
+            "--env-file",
+            str(tmp_path / ".env"),
+            "--url",
+            "https://example.test/roster",
+            "--required-text",
+            "Academy roster",
+        ]
+    )
+
+    emitted = json.loads(capsys.readouterr().out)
+    assert exit_code == 2
+    assert emitted["checks"]["content"] == "passed"
+    assert emitted["checks"]["parser"] == "failed"
 
 
 def test_manifest_command_writes_stable_jsonl(tmp_path, capsys):
@@ -326,6 +456,8 @@ def test_analyze_writes_normalized_outcomes_and_summary(tmp_path, capsys):
     rosters.write_text(
         "player_id,player_name,academy_id,season_start,source_url\n"
         "p1,Player One,academy-u19,2019,official-report\n"
+        "p2,Boundary Player,academy-u19,2020,official-report\n"
+        "p2,Boundary Player,academy-u19,2021,official-report\n"
     )
     appearances.write_text(
         "player_id,season_start,club_id,competition_id,appearances,source_url\n"
@@ -429,6 +561,54 @@ def test_analyze_rejects_rosters_from_another_academy(tmp_path):
                 str(tmp_path / "competitions.csv"),
                 "--coverage",
                 str(tmp_path / "coverage.csv"),
+                "--output-dir",
+                str(output_dir),
+                "--study-config",
+                str(study),
+            ]
+        )
+
+
+def test_analyze_rejects_missing_boundary_roster_seasons(tmp_path):
+    rosters = tmp_path / "rosters.csv"
+    appearances = tmp_path / "appearances.csv"
+    competitions = tmp_path / "competitions.csv"
+    coverage = tmp_path / "coverage.csv"
+    output_dir = tmp_path / "analysis"
+    study = tmp_path / "study.json"
+    _write_study(study, output_dir)
+    rosters.write_text(
+        "player_id,player_name,academy_id,season_start,source_url\n"
+        "p1,Player One,academy-u19,2019,official-report\n"
+    )
+    appearances.write_text(
+        "player_id,season_start,club_id,competition_id,appearances,source_url\n"
+    )
+    competitions.write_text(
+        "competition_id,season_start,tier,tier_rank,"
+        "eligible_domestic_league,policy_version\n"
+        "es1,2020,T0,0,true,v1\n"
+    )
+    coverage.write_text(
+        "player_id,season_start,status,scope_id,source_url\n"
+        "p1,2020,complete,complete-v1,official-stats\n"
+    )
+
+    with pytest.raises(
+        SystemExit,
+        match=r"roster facts do not cover configured seasons: missing=\[2020, 2021\]",
+    ):
+        main(
+            [
+                "analyze",
+                "--rosters",
+                str(rosters),
+                "--appearances",
+                str(appearances),
+                "--competitions",
+                str(competitions),
+                "--coverage",
+                str(coverage),
                 "--output-dir",
                 str(output_dir),
                 "--study-config",

@@ -149,27 +149,82 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 def _health(args: argparse.Namespace) -> int:
-    try:
-        config = load_keypool_config(args.env_file)
-        payload = FirecrawlClient(config).scrape(args.url)
-        document = validate_firecrawl_document(
-            payload,
-            ContentContract(tuple(args.required_text), args.min_profile_links),
-        )
-    except Exception as exc:
+    checks = {
+        "keypool": "not_checked",
+        "transport": "not_checked",
+        "firecrawl": "not_checked",
+        "target_page": "not_checked",
+        "content": "not_checked",
+        "parser": "not_checked",
+    }
+
+    def fail(gate: str, exc: Exception) -> int:
+        checks[gate] = "failed"
         _emit(
             {
                 "service": "keypool-firecrawl",
-                "target_contract": "failed",
+                "checks": checks,
                 "error_type": type(exc).__name__,
                 "error": _safe_error(exc),
             }
         )
         return 2
+
+    try:
+        config = load_keypool_config(args.env_file)
+    except Exception as exc:
+        return fail("keypool", exc)
+    checks["keypool"] = "passed"
+
+    try:
+        payload = FirecrawlClient(config).scrape(args.url)
+    except Exception as exc:
+        return fail("transport", exc)
+    checks["transport"] = "passed"
+
+    data = payload.get("data")
+    if payload.get("success") is not True or not isinstance(data, Mapping):
+        return fail("firecrawl", AcquisitionError("firecrawl response failed"))
+    checks["firecrawl"] = "passed"
+
+    metadata = data.get("metadata")
+    target_status = (
+        metadata.get("statusCode") if isinstance(metadata, Mapping) else None
+    )
+    if not isinstance(target_status, int) or not 200 <= target_status < 300:
+        return fail("target_page", AcquisitionError(f"target_status={target_status}"))
+    checks["target_page"] = "passed"
+
+    try:
+        document = validate_firecrawl_document(
+            payload,
+            ContentContract(tuple(args.required_text), args.min_profile_links),
+        )
+    except Exception as exc:
+        return fail("content", exc)
+    checks["content"] = "passed"
+
+    try:
+        parser_probe = parse_roster_blocks(
+            [
+                (0.0, 0.0, 50.0, 10.0, "JUVENIL A"),
+                (0.0, 20.0, 80.0, 30.0, "PORTERO: Parser Probe"),
+            ],
+            academy_id="health-probe",
+            season_start=2000,
+            source_url="health://parser-probe",
+            source_page=1,
+        )
+        if not parser_probe:
+            raise ValueError("parser probe returned no rows")
+    except Exception as exc:
+        return fail("parser", exc)
+    checks["parser"] = "passed"
+
     _emit(
         {
             "service": "keypool-firecrawl",
-            "target_contract": "passed",
+            "checks": checks,
             "target_status": document.target_status,
             "content_format": document.content_format,
             "content_sha256": document.content_sha256,
@@ -658,6 +713,15 @@ def _validate_memberships_for_study(
         raise SystemExit(
             "roster facts fall outside configured roster seasons: "
             f"actual={out_of_window}"
+        )
+    expected_seasons = set(
+        range(study.roster_season_start, study.roster_season_end + 1)
+    )
+    actual_seasons = {row.season_start for row in memberships}
+    missing_seasons = sorted(expected_seasons - actual_seasons)
+    if missing_seasons:
+        raise SystemExit(
+            f"roster facts do not cover configured seasons: missing={missing_seasons}"
         )
 
 
