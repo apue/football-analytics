@@ -23,8 +23,8 @@ Coding Agent 负责实现、测试和解释代码；学习者负责问题、假�
 
 ## 本地启动
 
-需要 Git、[uv](https://docs.astral.sh/uv/) 和 Python 3.12。安装基础开发和
-Notebook 环境：
+需要 Git、[uv](https://docs.astral.sh/uv/) 和 Python 3.12–3.14（本仓库默认
+Python 3.14）。安装基础开发和 Notebook 环境：
 
 ```bash
 uv sync --group notebook
