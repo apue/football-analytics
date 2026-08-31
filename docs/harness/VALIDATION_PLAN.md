@@ -5,7 +5,8 @@
 - Contract tests: evidence request/response and artifact boundary.
 - Regression tests: academy calculations and Barcelona frozen baseline.
 - Schema checks: study, search configuration, and skill packages.
-- Online smoke/E2E: one controlled Barcelona search through KeyPool.
+- Online smoke/E2E: one controlled Barcelona search through the direct
+  Firecrawl API.
 - Review: independent Standards and Spec code review after CI.
 
 ## Commands

@@ -1,4 +1,4 @@
-"""Auditable KeyPool-routed Firecrawl search and evidence filtering."""
+"""Auditable direct Firecrawl search and evidence filtering."""
 
 from __future__ import annotations
 
@@ -22,10 +22,9 @@ class EvidenceSearchError(RuntimeError):
 
 
 @dataclass(frozen=True)
-class KeyPoolConfig:
-    """Connection details whose representation never exposes the bearer token."""
+class FirecrawlConfig:
+    """Firecrawl credentials whose representation never exposes the API key."""
 
-    base_url: str
     api_key: str = field(repr=False)
 
 
@@ -55,11 +54,11 @@ RequestJson = Callable[
 
 
 class FirecrawlSearchClient:
-    """Minimal Firecrawl v2 search client routed through KeyPool."""
+    """Minimal direct Firecrawl v2 search client."""
 
     def __init__(
         self,
-        config: KeyPoolConfig,
+        config: FirecrawlConfig,
         *,
         request_json: RequestJson | None = None,
     ) -> None:
@@ -86,10 +85,9 @@ class FirecrawlSearchClient:
             payload["categories"] = [{"type": "pdf"}]
         return self._request_json(
             "POST",
-            f"{self._config.base_url}/v2/search",
+            "https://api.firecrawl.dev/v2/search",
             {
                 "Authorization": f"Bearer {self._config.api_key}",
-                "x-keypool-service": "firecrawl",
                 "Content-Type": "application/json",
                 "User-Agent": "football-analytics-evidence-search/1",
             },
@@ -97,15 +95,13 @@ class FirecrawlSearchClient:
         )
 
 
-def load_keypool_config(env_file: Path | None = None) -> KeyPoolConfig:
-    """Load KeyPool values from one explicit dotenv file or the environment."""
+def load_firecrawl_config() -> FirecrawlConfig:
+    """Load the direct Firecrawl API key from the process environment."""
 
-    values = _read_env_file(env_file) if env_file is not None else os.environ
-    base_url = _normalize_base_url(values.get("KEYPOOL_URL", ""))
-    api_key = values.get("KEYPOOL_KEY", "").strip()
+    api_key = os.environ.get("FIRECRAWL_API_KEY", "").strip()
     if not api_key:
-        raise EvidenceSearchError("KEYPOOL_KEY is missing or empty")
-    return KeyPoolConfig(base_url, api_key)
+        raise EvidenceSearchError("FIRECRAWL_API_KEY is missing or empty")
+    return FirecrawlConfig(api_key)
 
 
 def load_search_config(path: Path) -> EvidenceSearchConfig:
@@ -339,33 +335,6 @@ def _rejection_reasons(
     if not all(term in searchable_url for term in required_url_terms):
         reasons.append("url_terms_missing")
     return reasons
-
-
-def _read_env_file(path: Path) -> dict[str, str]:
-    try:
-        lines = path.read_text().splitlines()
-    except OSError as exc:
-        raise EvidenceSearchError(f"cannot read env file {path}: {exc}") from exc
-    values: dict[str, str] = {}
-    for raw_line in lines:
-        line = raw_line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, value = line.split("=", 1)
-        values[key.strip()] = value.strip().strip('"').strip("'")
-    return values
-
-
-def _normalize_base_url(value: str) -> str:
-    value = value.strip().rstrip("/")
-    if not value:
-        raise EvidenceSearchError("KEYPOOL_URL is missing or empty")
-    if not value.startswith(("http://", "https://")):
-        value = f"https://{value}"
-    parsed = urlsplit(value)
-    if not parsed.hostname:
-        raise EvidenceSearchError("KEYPOOL_URL is not a valid URL")
-    return value
 
 
 def _normalize_domain(value: Any) -> str:

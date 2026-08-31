@@ -4,7 +4,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_academy_modules_do_not_import_provider_transport():
+def test_academy_modules_do_not_import_firecrawl_transport():
     violations = []
     for path in (ROOT / "src/football_analytics").glob("academy_*.py"):
         tree = ast.parse(path.read_text())

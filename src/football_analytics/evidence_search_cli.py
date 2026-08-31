@@ -10,7 +10,7 @@ from pathlib import Path
 from .evidence_search import (
     EvidenceSearchError,
     FirecrawlSearchClient,
-    load_keypool_config,
+    load_firecrawl_config,
     load_search_config,
     replay_evidence_search,
     run_evidence_search,
@@ -23,9 +23,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="evidence-search")
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
-    inputs = parser.add_mutually_exclusive_group()
-    inputs.add_argument("--env-file", type=Path)
-    inputs.add_argument("--replay-raw-dir", type=Path)
+    parser.add_argument("--replay-raw-dir", type=Path)
     args = parser.parse_args(argv)
     try:
         search_config = load_search_config(args.config)
@@ -34,7 +32,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 search_config, args.replay_raw_dir, args.output_dir
             )
         else:
-            client = FirecrawlSearchClient(load_keypool_config(args.env_file))
+            client = FirecrawlSearchClient(load_firecrawl_config())
             summary = run_evidence_search(search_config, client, args.output_dir)
     except EvidenceSearchError as exc:
         parser.error(str(exc))

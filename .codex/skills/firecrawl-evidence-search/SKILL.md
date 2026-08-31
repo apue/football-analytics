@@ -1,6 +1,6 @@
 ---
 name: firecrawl-evidence-search
-description: Discover and mechanically filter auditable web-source candidates through KeyPool-routed Firecrawl search. Use when research needs candidate URLs or a reproducible evidence bundle. Do not use to analyze domain facts or download a known URL.
+description: Discover and mechanically filter auditable web-source candidates through the direct Firecrawl API. Use when research needs candidate URLs or a reproducible evidence bundle. Do not use to analyze domain facts or download a known URL.
 ---
 
 # Firecrawl Evidence Search
@@ -15,24 +15,23 @@ domains, required URL terms, result limit, country, and whether results must be
 PDFs. Create a committed config only when those choices are part of a
 repeatable study.
 
-Load credentials from `KEYPOOL_URL` and `KEYPOOL_KEY`, either in the environment
-or an explicitly supplied env file. Never print or persist their values.
+Load `FIRECRAWL_API_KEY` from the process environment. Never print or persist
+its value.
 
 ## Run
 
 ```bash
 uv run evidence-search \
   --config <search-config.json> \
-  --output-dir data/processed/evidence-search/<run-id> \
-  [--env-file <approved-env-file>]
+  --output-dir data/processed/evidence-search/<run-id>
 ```
 
-The command performs Firecrawl v2 search through KeyPool, preserves each raw
+The command calls Firecrawl v2 search directly, preserves each raw
 response, canonicalizes and deduplicates URLs, applies only the configured
 domain/PDF/required-URL-term filters, and writes `evidence.jsonl` plus
 `validation.json`.
-Use `--replay-raw-dir <previous-run>/raw` instead of `--env-file` to rebuild a
-bundle offline after changing deterministic filters.
+Use `--replay-raw-dir <previous-run>/raw` to rebuild a bundle offline after
+changing deterministic filters; replay does not require credentials.
 
 Read [evidence-contract.md](references/evidence-contract.md) before changing or
 consuming the artifact shape.

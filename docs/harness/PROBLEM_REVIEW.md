@@ -31,12 +31,20 @@ registry. Exact source coverage is enforced against frozen/reviewed evidence;
 live source-set differences are reported. The deterministic Barcelona analysis
 still matches all frozen 85-player business results.
 
-## Provider account state
+## Direct Firecrawl recovery
 
-After the successful repaired online run, the final live rerun returned HTTP
-403 with a structured Firecrawl message stating that the account was banned.
-The same response occurred for a single-query diagnostic, so it is external
-account state rather than query-specific behavior. Further retries stopped.
-The client now reports the query ID, HTTP status, and bounded structured provider
-error without exposing credentials. Final filter behavior was verified by
-offline replay of the successful repaired raw responses.
+The earlier routed credential eventually returned an account-level HTTP 403.
+The integration was replaced, without a compatibility path, by direct
+`https://api.firecrawl.dev/v2/search` bearer authentication using
+`FIRECRAWL_API_KEY`.
+
+The direct live run completed all seven committed queries and reproduced the
+same normalized result as the prior successful run: 117 canonical candidates,
+93 rejected, and 24 accepted. Comparison excludes only the retrieval timestamp;
+all other normalized evidence fields match. Replaying the new raw responses
+through the final code produced the same result again.
+
+The live bundle still recalls one of seven frozen URLs. The academy source
+validator therefore fails closed with six explicit missing URLs and does not
+substitute similar official documents. This is a discovery-coverage result,
+not a transport or implementation failure.

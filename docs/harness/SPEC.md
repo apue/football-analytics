@@ -3,18 +3,18 @@
 ## Goal
 
 Replace PR #8 with a reusable academy-conversion research workflow whose web
-discovery is a separate KeyPool-routed Firecrawl search capability.
+discovery is a separate direct Firecrawl search capability.
 
 ## Requirements
 
-- `evidence-search` searches through KeyPool, preserves the raw provider
+- `evidence-search` calls Firecrawl directly, preserves the raw provider
   response, normalizes and filters candidates, and writes `evidence.jsonl`.
-- `academy-conversion` contains no KeyPool or Firecrawl knowledge. It consumes
+- `academy-conversion` contains no Firecrawl transport knowledge. It consumes
   approved evidence records and deterministic roster/career facts.
 - The Barcelona Juvenil A 2015-16 through 2019-20 study reproduces the frozen
   source set and the current conservative lower-bound analysis.
-- Credentials come from environment variables or an explicitly supplied env
-  file and are never stored in artifacts or logs.
+- Credentials come only from the `FIRECRAWL_API_KEY` environment variable and
+  are never stored in artifacts or logs.
 
 ## Strong constraints
 

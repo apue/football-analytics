@@ -14,7 +14,7 @@ Juvenil A season rosters:
 - Intended use: discover and approve the official 2015-16 through 2021-22
   report URLs, then extract the `JUVENIL A` / `PLANTILLA` section from locally
   retained evidence.
-- Discovery: KeyPool-routed Firecrawl search may be used for bounded candidate
+- Discovery: direct Firecrawl search may be used for bounded candidate
   discovery. Passing the mechanical domain/PDF filters is not source approval.
 - Publication: publish derived roster facts with source attribution and links;
   do not redistribute the source PDFs.

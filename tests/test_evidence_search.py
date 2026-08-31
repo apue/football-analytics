@@ -9,9 +9,9 @@ import pytest
 from football_analytics.evidence_bundle import canonicalize_url, read_accepted_urls
 from football_analytics.evidence_search import (
     EvidenceSearchError,
+    FirecrawlConfig,
     FirecrawlSearchClient,
-    KeyPoolConfig,
-    load_keypool_config,
+    load_firecrawl_config,
     load_search_config,
     replay_evidence_search,
     run_evidence_search,
@@ -37,35 +37,23 @@ def _write_config(path: Path) -> None:
     )
 
 
-def test_keypool_config_is_normalized_and_redacted(tmp_path, monkeypatch):
-    env_file = tmp_path / ".env"
-    env_file.write_text("KEYPOOL_URL=keypool.example.test/\nKEYPOOL_KEY=secret\n")
-    monkeypatch.setenv("KEYPOOL_URL", "ignored.example.test")
+def test_firecrawl_config_comes_from_environment_and_is_redacted(monkeypatch):
+    monkeypatch.setenv("FIRECRAWL_API_KEY", "secret")
 
-    config = load_keypool_config(env_file)
+    config = load_firecrawl_config()
 
-    assert config == KeyPoolConfig("https://keypool.example.test", "secret")
+    assert config == FirecrawlConfig("secret")
     assert "secret" not in repr(config)
 
 
-def test_keypool_config_can_come_from_environment(monkeypatch):
-    monkeypatch.setenv("KEYPOOL_URL", "https://keypool.example.test/")
-    monkeypatch.setenv("KEYPOOL_KEY", "secret")
+def test_firecrawl_config_rejects_missing_key(monkeypatch):
+    monkeypatch.delenv("FIRECRAWL_API_KEY", raising=False)
 
-    assert load_keypool_config() == KeyPoolConfig(
-        "https://keypool.example.test", "secret"
-    )
+    with pytest.raises(EvidenceSearchError, match="FIRECRAWL_API_KEY"):
+        load_firecrawl_config()
 
 
-def test_keypool_config_rejects_missing_values(monkeypatch):
-    monkeypatch.delenv("KEYPOOL_URL", raising=False)
-    monkeypatch.delenv("KEYPOOL_KEY", raising=False)
-
-    with pytest.raises(EvidenceSearchError, match="KEYPOOL_URL"):
-        load_keypool_config()
-
-
-def test_firecrawl_client_uses_keypool_search_contract():
+def test_firecrawl_client_uses_direct_v2_search_contract():
     calls = []
 
     def request(method, url, headers, payload):
@@ -73,7 +61,7 @@ def test_firecrawl_client_uses_keypool_search_contract():
         return {"success": True, "data": {"web": []}}
 
     client = FirecrawlSearchClient(
-        KeyPoolConfig("https://keypool.example.test", "secret"),
+        FirecrawlConfig("secret"),
         request_json=request,
     )
     client.search(
@@ -85,9 +73,12 @@ def test_firecrawl_client_uses_keypool_search_contract():
 
     method, url, headers, payload = calls[0]
     assert method == "POST"
-    assert url == "https://keypool.example.test/v2/search"
-    assert headers["Authorization"] == "Bearer secret"
-    assert headers["x-keypool-service"] == "firecrawl"
+    assert url == "https://api.firecrawl.dev/v2/search"
+    assert headers == {
+        "Authorization": "Bearer secret",
+        "Content-Type": "application/json",
+        "User-Agent": "football-analytics-evidence-search/1",
+    }
     assert payload == {
         "query": "Barcelona annual report",
         "limit": 12,
@@ -105,7 +96,7 @@ def test_firecrawl_client_does_not_request_pdf_category_when_not_required():
         return {"success": True, "data": {"web": []}}
 
     client = FirecrawlSearchClient(
-        KeyPoolConfig("https://keypool.example.test", "secret"),
+        FirecrawlConfig("secret"),
         request_json=request,
     )
     client.search("official roster", limit=10, country="NL", require_pdf=False)
@@ -124,9 +115,7 @@ def test_firecrawl_http_error_surfaces_safe_provider_message(monkeypatch):
         )
 
     monkeypatch.setattr("football_analytics.evidence_search.urlopen", fail)
-    client = FirecrawlSearchClient(
-        KeyPoolConfig("https://keypool.example.test", "secret")
-    )
+    client = FirecrawlSearchClient(FirecrawlConfig("secret"))
 
     with pytest.raises(
         EvidenceSearchError, match="HTTP 403: account disabled"

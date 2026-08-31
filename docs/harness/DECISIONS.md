@@ -5,7 +5,7 @@
 - Branch from current `origin/main`; keep PR #8 unchanged as a comparison
   baseline until the replacement is reviewed.
 - Use a file artifact contract rather than runtime skill-to-skill invocation.
-- Keep one provider-specific implementation: KeyPool-routed Firecrawl v2
+- Keep one provider-specific implementation: direct Firecrawl v2
   search. Do not build a provider abstraction without a second provider.
 - Treat raw search ranking as volatile. Exact equality is required for replayed
   fixtures and downstream analysis, not live ranking.

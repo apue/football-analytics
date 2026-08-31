@@ -1,7 +1,7 @@
 # Architecture
 
 ```text
-KeyPool -> Firecrawl search -> raw response -> normalized evidence.jsonl
+Firecrawl API -> search -> raw response -> normalized evidence.jsonl
                                                    |
                                                    v
 approved academy sources -> parsed facts -> deterministic analysis -> report
