@@ -1,0 +1,4 @@
+interface:
+  display_name: "Firecrawl Evidence Search"
+  short_description: "Find auditable evidence with Firecrawl search"
+  default_prompt: "Search for auditable source evidence and return a validated evidence bundle."

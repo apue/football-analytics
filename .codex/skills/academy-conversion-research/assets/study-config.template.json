@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "study_id": "academy-squad-exit-years",
+  "academy": {
+    "academy_id": "stable-academy-squad-id",
+    "display_name": "Reader-facing academy name",
+    "squad_name": "Exact oldest-youth squad"
+  },
+  "cohorts": {
+    "roster_season_start": 2015,
+    "roster_season_end": 2021,
+    "exit_season_start": 2015,
+    "exit_season_end": 2019,
+    "observation_season_count": 5
+  },
+  "outcomes": {
+    "primary_appearance_threshold": 15,
+    "sensitivity_thresholds": [10, 15, 20],
+    "sustained_qualifying_seasons": 2,
+    "competition_policy_path": "config/academy_conversion/competition_policy_v1.json"
+  },
+  "roster_source": {
+    "config_path": "config/academy_conversion/academy_rosters.json",
+    "evidence_path": "config/academy_conversion/academy_approved_sources.jsonl",
+    "policy_status": "approved",
+    "public_url": "https://club.example/official-reports"
+  },
+  "adult_source": {
+    "scope_id": "career-source-scope",
+    "policy_status": "approved",
+    "public_url": "https://data.example/careers",
+    "coverage_note": "State the observable competitions and missingness."
+  },
+  "outputs": {
+    "run_dir": "data/processed/academy-conversion/runs/study-id",
+    "report_path": "data/processed/academy-conversion/runs/study-id/report/index.html"
+  }
+}

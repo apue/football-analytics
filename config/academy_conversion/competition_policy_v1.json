@@ -1,0 +1,71 @@
+{
+  "policy_version": "public-career-v1-partial",
+  "status": "approved-for-lower-bound-analysis",
+  "coverage_note": "The public career dataset omits required competitions, including Big Five second tiers and the Chinese top tier. Results are lower bounds only.",
+  "tiers": {
+    "T0": ["ES1", "FR1", "GB1", "IT1", "L1"],
+    "T1-A": ["A1", "BE1", "C1", "DK1", "GR1", "NL1", "PO1", "RU1", "SC1", "TR1", "UKR1"],
+    "T1-B": ["JAP1", "RSK1"],
+    "T2": ["ARG1", "AUS1", "BRA1", "KR1", "MEX1", "MLS1", "NO1", "PL1", "RO1", "SA1", "SE1", "SER1", "TS1"]
+  },
+  "tier_ranks": {"T0": 0, "T1-A": 1, "T1-B": 1, "T2": 2},
+  "tier_labels_zh": {
+    "T0": "五大联赛",
+    "T1-A": "其他选定欧洲高水平联赛",
+    "T1-B": "日韩顶级联赛",
+    "T2": "其他选定职业联赛"
+  },
+  "reporting_bands": [
+    {
+      "id": "professional",
+      "label_zh": "任一纳入的职业联赛",
+      "detail_zh": "职业资格由联赛白名单独立决定",
+      "tiers": null
+    },
+    {
+      "id": "higher-level",
+      "label_zh": "较高水平职业联赛",
+      "detail_zh": "五大联赛及其他选定高水平联赛",
+      "tiers": ["T0", "T1-A", "T1-B"]
+    },
+    {
+      "id": "big-five",
+      "label_zh": "五大联赛",
+      "detail_zh": "英超、西甲、德甲、意甲、法甲",
+      "tiers": ["T0"]
+    }
+  ],
+  "competition_metadata": {
+    "A1": {"country": "Austria", "domestic_level": 1, "name_zh": "奥地利甲级联赛", "career_eligible": true},
+    "ARG1": {"country": "Argentina", "domestic_level": 1, "name_zh": "阿根廷甲级联赛", "career_eligible": true},
+    "AUS1": {"country": "Australia", "domestic_level": 1, "name_zh": "澳大利亚A联赛", "career_eligible": true},
+    "BE1": {"country": "Belgium", "domestic_level": 1, "name_zh": "比利时甲级联赛", "career_eligible": true},
+    "BRA1": {"country": "Brazil", "domestic_level": 1, "name_zh": "巴西甲级联赛", "career_eligible": true},
+    "C1": {"country": "Switzerland", "domestic_level": 1, "name_zh": "瑞士超级联赛", "career_eligible": true},
+    "DK1": {"country": "Denmark", "domestic_level": 1, "name_zh": "丹麦超级联赛", "career_eligible": true},
+    "ES1": {"country": "Spain", "domestic_level": 1, "name_zh": "西甲", "career_eligible": true},
+    "FR1": {"country": "France", "domestic_level": 1, "name_zh": "法甲", "career_eligible": true},
+    "GB1": {"country": "England", "domestic_level": 1, "name_zh": "英超", "career_eligible": true},
+    "GR1": {"country": "Greece", "domestic_level": 1, "name_zh": "希腊超级联赛", "career_eligible": true},
+    "IT1": {"country": "Italy", "domestic_level": 1, "name_zh": "意甲", "career_eligible": true},
+    "JAP1": {"country": "Japan", "domestic_level": 1, "name_zh": "J1联赛", "career_eligible": true},
+    "KR1": {"country": "Croatia", "domestic_level": 1, "name_zh": "克罗地亚甲级联赛", "career_eligible": true},
+    "L1": {"country": "Germany", "domestic_level": 1, "name_zh": "德甲", "career_eligible": true},
+    "MEX1": {"country": "Mexico", "domestic_level": 1, "name_zh": "墨西哥甲级联赛", "career_eligible": true},
+    "MLS1": {"country": "United States", "domestic_level": 1, "name_zh": "美国职业足球大联盟", "career_eligible": true},
+    "NL1": {"country": "Netherlands", "domestic_level": 1, "name_zh": "荷甲", "career_eligible": true},
+    "NO1": {"country": "Norway", "domestic_level": 1, "name_zh": "挪威超级联赛", "career_eligible": true},
+    "PL1": {"country": "Poland", "domestic_level": 1, "name_zh": "波兰超级联赛", "career_eligible": true},
+    "PO1": {"country": "Portugal", "domestic_level": 1, "name_zh": "葡超", "career_eligible": true},
+    "RO1": {"country": "Romania", "domestic_level": 1, "name_zh": "罗马尼亚甲级联赛", "career_eligible": true},
+    "RSK1": {"country": "Korea, South", "domestic_level": 1, "name_zh": "K1联赛", "career_eligible": true},
+    "RU1": {"country": "Russia", "domestic_level": 1, "name_zh": "俄超", "career_eligible": true},
+    "SA1": {"country": "Saudi Arabia", "domestic_level": 1, "name_zh": "沙特职业联赛", "career_eligible": true},
+    "SC1": {"country": "Scotland", "domestic_level": 1, "name_zh": "苏格兰超级联赛", "career_eligible": true},
+    "SE1": {"country": "Sweden", "domestic_level": 1, "name_zh": "瑞典超级联赛", "career_eligible": true},
+    "SER1": {"country": "Serbia", "domestic_level": 1, "name_zh": "塞尔维亚超级联赛", "career_eligible": true},
+    "TR1": {"country": "Türkiye", "domestic_level": 1, "name_zh": "土超", "career_eligible": true},
+    "TS1": {"country": "Czech Republic", "domestic_level": 1, "name_zh": "捷克甲级联赛", "career_eligible": true},
+    "UKR1": {"country": "Ukraine", "domestic_level": 1, "name_zh": "乌克兰超级联赛", "career_eligible": true}
+  }
+}

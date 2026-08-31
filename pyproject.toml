@@ -11,6 +11,8 @@ dependencies = []
 book-ref = "football_analytics.book_reference_cli:main"
 catalog = "football_analytics.catalog_cli:main"
 match-evidence = "football_analytics.evidence_cli:main"
+evidence-search = "football_analytics.evidence_search_cli:main"
+academy-conversion = "football_analytics.academy_conversion_cli:main"
 
 [dependency-groups]
 notebook = [
