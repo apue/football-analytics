@@ -41,7 +41,8 @@ uv run academy-conversion validate-sources \
   --evidence <evidence.jsonl>
 ```
 
-The academy code must not read KeyPool configuration or Firecrawl responses.
+The academy code must not read provider credentials or Firecrawl transport
+responses.
 
 ## Deterministic research
 
